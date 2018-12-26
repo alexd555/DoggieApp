@@ -1,10 +1,14 @@
 package com.example.android.doggie;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.location.Location;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,7 +20,13 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.Toast;
-
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.example.android.doggie.model.Dog;
 import com.example.android.doggie.util.DogUtil;
 import com.google.android.gms.tasks.Continuation;
@@ -31,7 +41,8 @@ import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
-
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Random;
@@ -77,9 +88,13 @@ public class SignUpActivity extends AppCompatActivity {
 
     private String imageUrl;
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Toast.makeText(this, "onCreate", Toast.LENGTH_SHORT).show();
+
         setContentView(R.layout.activity_sign_up);
         ButterKnife.bind(this);
 
@@ -92,10 +107,9 @@ public class SignUpActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
+        Toast.makeText(this, "onActivityResult", Toast.LENGTH_SHORT).show();
         // Get the Uri of the image from the gallery intent data
         if (requestCode == GALLARY_INTENT && resultCode == RESULT_OK) {
-
             Uri file = data.getData();
 
             // Make the chosen image from gallery be seen to the user in the sign up form
@@ -185,10 +199,12 @@ public class SignUpActivity extends AppCompatActivity {
             Toast.makeText(this, "You must specify gender", Toast.LENGTH_SHORT).show();
             return;
         }
-
-
+        //requestLocationUpdates();
+        Location location = (Location)getIntent().getParcelableExtra("location");
+        Toast.makeText(this, ""+location.getLatitude(), Toast.LENGTH_SHORT).show();
         final Dog dog = new Dog(FirebaseAuth.getInstance().getCurrentUser(),
-                name, weight, breed, 0, age, gender);
+                name, weight, breed, 0, age, gender, location.getLatitude(),
+                location.getLongitude());
 
         // Handle dog's image
 

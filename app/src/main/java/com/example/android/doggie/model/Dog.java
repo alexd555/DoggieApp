@@ -4,6 +4,9 @@ import android.text.TextUtils;
 
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.IgnoreExtraProperties;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 
 @IgnoreExtraProperties
 public class Dog {
@@ -23,11 +26,12 @@ public class Dog {
     private double distance;
     private int age;
     private String gender;
-
+    private double latitude;
+    private double longitude;
     public Dog() {}
 
     public Dog(FirebaseUser user, String dogName, int weight, String breed,
-               double distance, int age, String gender) {
+               double distance, int age, String gender, double latitude, double longitude) {
         this.userId = user.getUid();
         this.userName = user.getDisplayName();
         if (TextUtils.isEmpty(this.userName)) {
@@ -40,6 +44,8 @@ public class Dog {
         this.distance = distance;
         this.age = age;
         this.gender = gender;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 
     public String getUserId() { return userId; }
@@ -103,4 +109,13 @@ public class Dog {
     public String getGender() { return gender; }
 
     public void setGender(String gender) { this.gender = gender; }
+
+    public double getLatitude()
+    {
+        return latitude;
+    }
+
+    public double getLongitude() {
+        return longitude;
+    }
 }

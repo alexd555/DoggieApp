@@ -5,6 +5,7 @@
     "project_id": "doggie-a1cee",
     "storage_bucket": "doggie-a1cee.appspot.com"
   },
+
   "client": [
     {
       "client_info": {

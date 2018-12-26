@@ -1,12 +1,21 @@
 package com.example.android.doggie;
 
+import android.Manifest;
+import android.annotation.TargetApi;
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.media.Rating;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.os.Build;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.StringRes;
-import android.support.design.widget.Snackbar;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,7 +29,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import android.support.design.widget.Snackbar;
 import com.example.android.doggie.adapter.DogAdapter;
 import com.example.android.doggie.model.Dog;
 import com.example.android.doggie.util.DogUtil;
@@ -28,6 +39,11 @@ import com.example.android.doggie.viewmodel.MainActivityViewModel;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.ErrorCodes;
 import com.firebase.ui.auth.IdpResponse;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -35,6 +51,8 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.FirebaseUserMetadata;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -43,16 +61,21 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.WriteBatch;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import android.location.Location;
+import  com.google.android.gms.location.LocationListener;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-public class MainActivity extends AppCompatActivity implements
+import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+
+public class MainActivity extends AppCompatActivity implements LocationListener,
         FilterDialogFragment.FilterListener,
         DogAdapter.OnDogSelectedListener {
 
@@ -61,6 +84,8 @@ public class MainActivity extends AppCompatActivity implements
     private static final int RC_SIGN_IN = 2810;
 
     private static final int LIMIT = 50;
+    private Location location;
+    private LocationTrack locationTrack;
 
     @BindView(R.id.toolbar)
     Toolbar mToolbar;
@@ -84,14 +109,138 @@ public class MainActivity extends AppCompatActivity implements
     private DogAdapter mAdapter;
 
     private MainActivityViewModel mViewModel;
+    private ArrayList<String> permissionsToRequest;
+    private ArrayList<String> permissionsRejected = new ArrayList<>();
+    private ArrayList<String> permissions = new ArrayList<>();
+    private DatabaseReference mDatabase;
+    private final static int ALL_PERMISSIONS_RESULT = 101;
+    private ArrayList<String> findUnAskedPermissions(ArrayList<String> wanted) {
+        ArrayList<String> result = new ArrayList<String>();
 
+        for (String perm : wanted) {
+            if (!hasPermission(perm)) {
+                result.add(perm);
+            }
+        }
+
+        return result;
+    }
+
+    private boolean hasPermission(String permission) {
+        if (canMakeSmores()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                return (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
+            }
+        }
+        return true;
+    }
+
+    private boolean canMakeSmores() {
+        return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
+    }
+
+    private void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
+        new AlertDialog.Builder(MainActivity.this)
+                .setMessage(message)
+                .setPositiveButton("OK", okListener)
+                .setNegativeButton("Cancel", null)
+                .create()
+                .show();
+    }
+    @TargetApi(Build.VERSION_CODES.M)
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+
+        switch (requestCode) {
+
+            case ALL_PERMISSIONS_RESULT:
+                for (String perms : permissionsToRequest) {
+                    if (!hasPermission(perms)) {
+                        permissionsRejected.add(perms);
+                    }
+                }
+
+                if (permissionsRejected.size() > 0) {
+
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        if (shouldShowRequestPermissionRationale(permissionsRejected.get(0))) {
+                            showMessageOKCancel("These permissions are mandatory for the application. Please allow access.",
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                                requestPermissions(permissionsRejected.toArray(new String[permissionsRejected.size()]), ALL_PERMISSIONS_RESULT);
+                                            }
+                                        }
+                                    });
+                            return;
+                        }
+                    }
+
+                }
+
+                break;
+        }
+
+    }
+    private void requestLocationUpdates() {
+        LocationRequest request = new LocationRequest();
+
+        //Specify how often your app should request the device’s location
+        request.setInterval(10000);
+
+        //Get the most accurate location data available//
+        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
+        final String path = "location";
+        int permission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION);
+
+        //If the app currently has access to the location permission...//
+
+        if (permission == PackageManager.PERMISSION_GRANTED) {
+
+            //...then request location updates//
+            client.requestLocationUpdates(request, new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult locationResult) {
+                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                    String name = user.getDisplayName();
+                    String id = user.getUid();
+                    //Get a reference to the database, so your app can perform read and write operations//
+                    DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child(id);
+                    Location location = locationResult.getLastLocation();
+                    if (location != null) {
+
+//Save the location data to the database//
+
+                        ref.setValue(location);
+                    }
+                }
+            }, null);
+        }
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         setSupportActionBar(mToolbar);
+        permissions.add(ACCESS_FINE_LOCATION);
+        permissions.add(ACCESS_COARSE_LOCATION);
 
+        permissionsToRequest = findUnAskedPermissions(permissions);
+        //get the permissions we have asked for before but are not granted..
+        //we will store this in a global list to access later.
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+
+            if (permissionsToRequest.size() > 0)
+                requestPermissions(permissionsToRequest.toArray(new String[permissionsToRequest.size()]), ALL_PERMISSIONS_RESULT);
+        }
         // View model
         mViewModel = ViewModelProviders.of(this).get(MainActivityViewModel.class);
 
@@ -101,12 +250,12 @@ public class MainActivity extends AppCompatActivity implements
         // Access a Cloud Firestore instance from MainActivity
         mFirestore = FirebaseFirestore.getInstance();
 
-        // Get ${LIMIT} dogs
+//         Get ${LIMIT} dogs
         mQuery = mFirestore.collection("dogs")
                 .orderBy("distance", Query.Direction.ASCENDING)
                 .limit(LIMIT);
 
-        // RecyclerView
+//        // RecyclerView
         mAdapter = new DogAdapter(mQuery, this) {
             @Override
             protected void onDataChanged() {
@@ -133,6 +282,23 @@ public class MainActivity extends AppCompatActivity implements
 
         // Filter Dialog
         mFilterDialog = new FilterDialogFragment();
+//        mDatabase = FirebaseDatabase.getInstance().getReference();
+//        DatabaseReference mRef = mDatabase.child("copyright");
+//        mRef.setValue("©2016 androidhive. All rights Reserved");
+        requestLocationUpdates();
+        locationTrack = new LocationTrack(MainActivity.this);
+
+
+        if (locationTrack.canGetLocation()) {
+
+            location = locationTrack.getLocation();
+            double longitude = locationTrack.getLongitude();
+            double latitude = locationTrack.getLatitude();
+
+           // Toast.makeText(getApplicationContext(), "Longitude:" + Double.toString(longitude) + "\nLatitude:" + Double.toString(latitude), Toast.LENGTH_SHORT).show();
+        } else {
+            locationTrack.showSettingsAlert();
+        }
     }
 
     @Override
@@ -151,6 +317,8 @@ public class MainActivity extends AppCompatActivity implements
         // Start listening for Firestore updates
         if (mAdapter != null) {
             mAdapter.startListening();
+           // Toast.makeText(getApplicationContext(), "onStart", Toast.LENGTH_SHORT).show();
+
         }
     }
 
@@ -170,6 +338,8 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        Toast.makeText(getApplicationContext(), "onActivityResult", Toast.LENGTH_SHORT).show();
+
         switch (item.getItemId()) {
             case R.id.menu_add_dog:
                 onAddDogClicked();
@@ -188,6 +358,8 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        Toast.makeText(getApplicationContext(), "onActivityResult", Toast.LENGTH_SHORT).show();
+
         if (requestCode == RC_SIGN_IN) {
             IdpResponse response = IdpResponse.fromResultIntent(data);
             mViewModel.setIsSigningIn(false);
@@ -208,7 +380,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @OnClick(R.id.filter_bar)
     public void onFilterClicked() {
-        // Show the dialog containing filter options
+//         Show the dialog containing filter options
         mFilterDialog.show(getSupportFragmentManager(), FilterDialogFragment.TAG);
     }
 
@@ -264,6 +436,8 @@ public class MainActivity extends AppCompatActivity implements
 
     private void startSignIn() {
         // Sign in with FirebaseUI
+        Toast.makeText(getApplicationContext(), "startSignIn", Toast.LENGTH_SHORT).show();
+
         Intent intent = AuthUI.getInstance().createSignInIntentBuilder()
                 .setAvailableProviders(Collections.singletonList(
                         new AuthUI.IdpConfig.EmailBuilder().build()))
@@ -295,7 +469,7 @@ public class MainActivity extends AppCompatActivity implements
     private void onAddDogClicked() {
         // Go to registration page
         Intent intent = new Intent(this, SignUpActivity.class);
-
+        intent.putExtra("location",location);
         startActivity(intent);
 //        overridePendingTransition(R.anim.slide_in_from_right, R.anim.slide_out_to_left);
 
@@ -326,5 +500,10 @@ public class MainActivity extends AppCompatActivity implements
                 }).create();
 
         dialog.show();
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+
     }
 }
