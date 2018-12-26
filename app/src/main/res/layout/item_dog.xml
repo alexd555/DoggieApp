@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/dog_item_image"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="#757575"
+        android:scaleType="centerCrop"
+        android:src="@drawable/miley" />
+
+    <TextView
+        android:id="@+id/dog_item_name"
+        style="@style/AppTheme.Subheader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/dog_item_image"
+        android:layout_marginBottom="4dp"
+        android:layout_marginLeft="8dp"
+        android:layout_marginTop="-2dp"
+        android:layout_toLeftOf="@+id/dog_item_distance"
+        android:layout_toRightOf="@+id/dog_item_image"
+        android:ellipsize="end"
+        android:maxLines="1"
+        tools:text="Miley" />
+
+    <TextView
+        android:id="@+id/dog_item_gender"
+        style="@style/AppTheme.Body1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/dog_item_name"
+        android:layout_below="@+id/dog_item_name"
+        android:layout_marginBottom="4dp"
+        tools:text="Female" />
+
+    <TextView
+        android:id="@+id/dog_item_age"
+        style="@style/AppTheme.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/dog_item_gender"
+        android:layout_alignTop="@+id/dog_item_gender"
+        android:layout_marginLeft="4dp"
+        android:layout_toRightOf="@+id/dog_item_gender"
+        android:gravity="center_vertical"
+        android:textColor="@color/greyDisabled"
+        tools:text="(2 years old)" />
+
+    <TextView
+        android:id="@+id/breed_item_category"
+        style="@style/AppTheme.Body1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/dog_item_name"
+        android:layout_below="@+id/dog_item_gender"
+        android:textColor="@color/greySecondary"
+        tools:text="Mixed" />
+
+    <TextView
+        android:id="@+id/dog_item_weight_divider"
+        style="@style/AppTheme.TextDivider"
+        android:layout_alignTop="@+id/breed_item_category"
+        android:layout_toRightOf="@+id/breed_item_category"
+        android:text="@string/divider_bullet" />
+
+    <TextView
+        android:id="@+id/dog_item_weight"
+        style="@style/AppTheme.Body1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/breed_item_category"
+        android:layout_toRightOf="@+id/dog_item_weight_divider"
+        android:textColor="@color/greySecondary"
+        tools:text="35 kg" />
+
+    <TextView
+        android:id="@+id/dog_item_distance"
+        style="@style/AppTheme.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:textColor="@color/greySecondary"
+        tools:text="0 km" />
+
+</RelativeLayout>

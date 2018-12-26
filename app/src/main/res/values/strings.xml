@@ -1,0 +1,128 @@
+<resources>
+    <string name="app_name">Doggie</string>
+
+    <string name="value_any_breed">All Breeds</string>
+    <string name="value_any_gender">Any Gender</string>
+    <string name="value_any_distance">Any price</string>
+
+    <!-- Height of each list item -->
+    <dimen name="list_item_height">88dp</dimen>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="activity_horizontal_margin">16dp</dimen>
+    <dimen name="activity_vertical_margin">16dp</dimen>
+
+    <string name="all_dogs">All Dogs</string>
+    <string name="header_filters">Filter</string>
+    <string name="header_register_dog">Register a New Dog</string>
+    <string name="search">Search</string>
+    <plurals name="fmt_dog_age">
+        <item quantity="one">(%d year old)</item>
+        <item quantity="other">(%d years old)</item>
+    </plurals>
+    <string name="fmt_distance">%s km</string>
+    <string name="fmt_weight">%d kg</string>
+
+    <string name="sort_by_distance">Sort by Distance</string>
+    <string name="sort_by_age">Sort by Age</string>
+    <string name="sort_by_weight">Sort by Weight</string>
+
+    <string name="sorted_by_distance">sorted by distance</string>
+    <string name="sorted_by_age">sorted by age</string>
+    <string name="sorted_by_weight">sorted by weight</string>
+
+    <string name="add_random_items">Add Random Items</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="divider_bullet">•</string>
+    <string name="apply">Apply</string>
+    <string name="cancel">Cancel</string>
+    <string name="female">Female</string>
+    <string name="male">Male</string>
+    <string name="birthday">Dog\'s Birthday</string>
+    <string name="message_no_results">Oops, couldn\'t find any results</string>
+
+    <string name="title_sign_in_error">Sign In Error</string>
+    <string name="message_no_network">No network connection.</string>
+    <string name="message_unknown">Unknown error.</string>
+    <string name="option_retry">Retry</string>
+    <string name="option_exit">Exit</string>
+
+    <!-- Types of dogs breeds -->
+    <string-array name="breeds">
+        <item>@string/value_any_breed</item>
+
+        <item>Mixed</item>
+        <item>Unknown</item>
+        <item>Bulldog</item>
+        <item>German Shepherd</item>
+        <item>Labrador Retriever</item>
+        <item>Beagle</item>
+        <item>Poodle</item>
+        <item>Golden Retriever</item>
+        <item>Chihuahua</item>
+        <item>Pug</item>
+        <item>Boxer</item>
+        <item>Dachshund</item>
+        <item>Yorkshire Terrier</item>
+        <item>French Bulldog</item>
+        <item>Siberian Husky</item>
+        <item>Dobermann</item>
+        <item>Great Dane</item>
+        <item>Rottweiler</item>
+        <item>Pomeranian</item>
+        <item>Pointer</item>
+        <item>English Mastiff</item>
+    </string-array>
+
+    <string-array name="breeds_types">
+        <item>Unknown</item>
+        <item>Mixed</item>
+        <item>Bulldog</item>
+        <item>German Shepherd</item>
+        <item>Labrador Retriever</item>
+        <item>Beagle</item>
+        <item>Poodle</item>
+        <item>Golden Retriever</item>
+        <item>Chihuahua</item>
+        <item>Pug</item>
+        <item>Boxer</item>
+        <item>Dachshund</item>
+        <item>Yorkshire Terrier</item>
+        <item>French Bulldog</item>
+        <item>Siberian Husky</item>
+        <item>Dobermann</item>
+        <item>Great Dane</item>
+        <item>Rottweiler</item>
+        <item>Pomeranian</item>
+        <item>Pointer</item>
+        <item>English Mastiff</item>
+    </string-array>
+
+    <!-- Genders -->
+    <string-array name="genders">
+        <item>@string/value_any_gender</item>
+
+        <item>@string/female</item>
+        <item>@string/male</item>
+    </string-array>
+
+    <!-- Ways you can sort restaurants -->
+    <string-array name="sort_by">
+        <item>@string/sort_by_distance</item>
+        <item>@string/sort_by_age</item>
+        <item>@string/sort_by_weight</item>
+    </string-array>
+
+    <!--<string name="title_sign_in_error">Sign In Error</string>-->
+    <!--<string name="message_no_network">No network connection.</string>-->
+    <!--<string name="message_unknown">Unknown error.</string>-->
+    <!--<string name="option_retry">Retry</string>-->
+    <!--<string name="option_exit">Exit</string>-->
+
+
+    <!--&lt;!&ndash;FIRE BASE DIMEN&ndash;&gt;-->
+    <!--<dimen name="icon_top_margin">24dp</dimen>-->
+    <!--<dimen name="icon_bottom_margin">24dp</dimen>-->
+    <!--<dimen name="title_bottom_margin">16dp</dimen>-->
+    <!--<dimen name="field_width_standard">160dp</dimen>-->
+
+</resources>
