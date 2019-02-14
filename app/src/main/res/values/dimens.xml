@@ -1,46 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--<string name="app_name">Doggie</string>-->
-
-    <!--&lt;!&ndash; Strings related to login &ndash;&gt;-->
-    <!--<string name="user_name">Username</string>-->
-    <!--<string name="dog_name">Dog\'s Name</string>-->
-    <!--<string name="dog_age">Dog\'s Age</string>-->
-    <!--<string name="password">Password</string>-->
-
-    <!--<string name="hint_user_id">User ID</string>-->
-    <!--<string name="get_custom_token">Get Token</string>-->
-    <!--<string name="sign_in">Sign In</string>-->
-    <!--<string name="create_account">Create Account</string>-->
-    <!--<string name="send_link">Send Link</string>-->
-    <!--<string name="verify_email">Verify Email</string>-->
-    <!--<string name="disconnect">Disconnect</string>-->
-    <!--<string name="loading">Loading…</string>-->
-    <!--<string name="custom_token">Custom Token</string>-->
-    <!--<string name="signed_in">Signed In</string>-->
-    <!--<string name="signed_out">Signed Out</string>-->
-    <!--<string name="token_null">Token: null</string>-->
-    <!--<string name="hint_email">Email</string>-->
-    <!--<string name="hint_password">Password</string>-->
-    <!--<string name="desc_firebase_lockup">Firebase logo and name</string>-->
-    <!--<string name="auth_failed">Authentication failed</string>-->
-    <!--<string name="start_phone_auth">Start</string>-->
-    <!--<string name="verify_phone_auth">Verify</string>-->
-    <!--<string name="resend_phone_auth">Resend</string>-->
-    <!--<string name="hint_phone_number">Phone Number</string>-->
-    <!--<string name="hint_verification_code">Verification Code</string>-->
-    <!--<string name="status_code_sent">Code Sent</string>-->
-    <!--<string name="status_verification_failed">Verification failed</string>-->
-    <!--<string name="status_verification_succeeded">Verification succeeded</string>-->
-    <!--<string name="status_sign_in_failed">Sign-in failed</string>-->
-    <!--<string name="instant_validation">(instant validation)</string>-->
-
-    <!--<string name="firebase_status_fmt">Firebase User: %s</string>-->
-    <!--<string name="firebase_user_management">Firebase User Management</string>-->
-
-    <!--<string name="emailpassword_status_fmt">Email User: %1$s (verified: %2$b)</string>-->
-    <!--<string name="emailpassword_title_text">Email and Password</string>-->
-
-    <!--&lt;!&ndash; Facebook application ID and custom URL scheme (app ID prefixed by 'fb'). &ndash;&gt;-->
-    <!--<string name="facebook_application_id" translatable="false">YOUR_APP_ID</string>-->
-    <!--<string name="facebook_login_protocol_scheme" translatable="false">fbYOUR_APP_ID</string>-->
+    <dimen name="custom_marker_image">50dp</dimen>
+    <dimen name="custom_marker_padding">2dp</dimen>
 </resources>

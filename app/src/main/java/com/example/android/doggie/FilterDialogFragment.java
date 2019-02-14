@@ -4,12 +4,13 @@ import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Spinner;
 
-import com.example.android.doggie.model.Dog;
+import com.example.android.doggie.models.Dog;
 import com.google.firebase.firestore.Query;
 
 import butterknife.BindView;

@@ -3,8 +3,7 @@ package com.example.android.doggie;
 import android.content.Context;
 import android.text.TextUtils;
 
-import com.example.android.doggie.model.Dog;
-import com.example.android.doggie.util.DogUtil;
+import com.example.android.doggie.models.Dog;
 import com.google.firebase.firestore.Query;
 
 /**

@@ -1,17 +1,12 @@
 package com.example.android.doggie.util;
 
 import android.content.Context;
-import android.media.Image;
-import android.support.v7.widget.Toolbar;
 
 import com.example.android.doggie.R;
-import com.example.android.doggie.model.Dog;
+import com.example.android.doggie.models.Dog;
 
 import java.util.Arrays;
-import java.util.Locale;
 import java.util.Random;
-
-import butterknife.BindView;
 
 /**
  * Utilities for Restaurants.

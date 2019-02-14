@@ -11,7 +11,7 @@ android {
         versionName "1.0"
         multiDexEnabled true
 
-        vectorDrawables.useSupportLibrary true
+//        vectorDrawables.useSupportLibrary true
 
         lintOptions {
             disable 'InvalidPackage'
@@ -29,21 +29,8 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.android.gms:play-services-location:16.0.0'
-    implementation 'com.google.firebase:firebase-database:16.0.5'
 
-    // Firestore
-    implementation 'com.google.firebase:firebase-core:16.0.5'
-    implementation 'com.google.firebase:firebase-firestore:17.1.0'
-
-
-    // Other Firebase/Play services deps
-    implementation 'com.google.firebase:firebase-auth:16.0.5'
-    implementation 'com.google.android.gms:play-services-auth:16.0.1'
-
-    // FirebaseUI (for authentication)
-    implementation 'com.firebaseui:firebase-ui-auth:4.1.0'
-
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     // ButterKnife (for sample code brevity)
     implementation 'com.jakewharton:butterknife:8.8.1'
 //    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
@@ -57,6 +44,8 @@ dependencies {
     implementation 'com.android.support:design:27.1.1'
     implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation 'com.android.support:multidex:1.0.3'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.2'
+
 
     // Android architecture components
     implementation 'android.arch.lifecycle:runtime:1.1.1'
@@ -74,14 +63,33 @@ dependencies {
     androidTestImplementation 'com.android.support.test.uiautomator:uiautomator-v18:2.1.3'
     androidTestImplementation 'junit:junit:4.12'
     androidTestImplementation 'org.hamcrest:hamcrest-library:1.3'
-    androidTestImplementation 'com.google.firebase:firebase-auth:16.0.5'
+
+
+    // Firebase Core
+    implementation 'com.google.firebase:firebase-core:16.0.1'
+    //Firebase Authentication
+    implementation 'com.google.firebase:firebase-auth:16.0.2'
+    // Firestore Firestore
+    implementation 'com.google.firebase:firebase-firestore:17.0.4'
 
     // Firebase Storage
     implementation 'com.google.firebase:firebase-storage:16.0.5'
 
-    // FirebaseUI Storage only
-    implementation 'com.firebaseui:firebase-ui-storage:4.1.0'
+    //Google Play Services for Maps
+    implementation 'com.google.android.gms:play-services-maps:15.0.1'
+
+    // Maps utils (required for custom markers)
+    implementation 'com.google.maps.android:android-maps-utils:0.5+'
+
+    // Google play services for location information
+    implementation 'com.google.android.gms:play-services-location:15.0.1'
+
+    // Google Maps Services (needed for directions)
+    implementation 'com.google.maps:google-maps-services:0.2.9'
+    implementation 'org.slf4j:slf4j-nop:1.7.25'
 }
 
 apply plugin: 'com.google.gms.google-services'
+com.google.gms.googleservices.GoogleServicesPlugin.config.disableVersionCheck = true
+//android.defaultConfig.vectorDrawables.useSupportLibrary = true
 

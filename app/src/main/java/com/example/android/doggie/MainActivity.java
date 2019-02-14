@@ -1,22 +1,20 @@
 package com.example.android.doggie;
 
 import android.Manifest;
-import android.annotation.TargetApi;
+import android.app.ActivityManager;
+import android.app.Dialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.location.LocationManager;
-import android.media.Rating;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Build;
-import android.provider.Settings;
 import android.support.annotation.NonNull;
-import android.support.annotation.StringRes;
+import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -31,51 +29,42 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import android.support.design.widget.Snackbar;
 import com.example.android.doggie.adapter.DogAdapter;
-import com.example.android.doggie.model.Dog;
-import com.example.android.doggie.util.DogUtil;
+import com.example.android.doggie.models.Dog;
+import com.example.android.doggie.models.User;
+import com.example.android.doggie.models.UserLocation;
+import com.example.android.doggie.services.LocationService;
 import com.example.android.doggie.viewmodel.MainActivityViewModel;
-import com.firebase.ui.auth.AuthUI;
-import com.firebase.ui.auth.ErrorCodes;
-import com.firebase.ui.auth.IdpResponse;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.FirebaseUserMetadata;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.GeoPoint;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import android.location.Location;
-import  com.google.android.gms.location.LocationListener;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
-import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static com.example.android.doggie.Constants.ERROR_DIALOG_REQUEST;
+import static com.example.android.doggie.Constants.PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION;
+import static com.example.android.doggie.Constants.PERMISSIONS_REQUEST_ENABLE_GPS;
 
-public class MainActivity extends AppCompatActivity implements LocationListener,
+public class MainActivity extends AppCompatActivity implements
         FilterDialogFragment.FilterListener,
         DogAdapter.OnDogSelectedListener {
 
@@ -84,8 +73,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     private static final int RC_SIGN_IN = 2810;
 
     private static final int LIMIT = 50;
-    private Location location;
-    private LocationTrack locationTrack;
 
     @BindView(R.id.toolbar)
     Toolbar mToolbar;
@@ -103,159 +90,43 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     ViewGroup mEmptyView;
 
     private FirebaseFirestore mFirestore;
+    private FirebaseAuth firebaseAuth;
     private Query mQuery;
 
     private FilterDialogFragment mFilterDialog;
     private DogAdapter mAdapter;
 
     private MainActivityViewModel mViewModel;
-    private ArrayList<String> permissionsToRequest;
-    private ArrayList<String> permissionsRejected = new ArrayList<>();
-    private ArrayList<String> permissions = new ArrayList<>();
-    private DatabaseReference mDatabase;
-    private final static int ALL_PERMISSIONS_RESULT = 101;
-    private ArrayList<String> findUnAskedPermissions(ArrayList<String> wanted) {
-        ArrayList<String> result = new ArrayList<String>();
 
-        for (String perm : wanted) {
-            if (!hasPermission(perm)) {
-                result.add(perm);
-            }
-        }
+    private boolean mLocationPermissionGranted = false;
+    private FusedLocationProviderClient mFusedLocationClient;
+    private UserLocation mUserLocation;
+    private ArrayList<User> mUserList = new ArrayList<>();
+    private ArrayList<UserLocation> mUserLocations = new ArrayList<>();
+    private ListenerRegistration mUserListEventListener;
 
-        return result;
-    }
-
-    private boolean hasPermission(String permission) {
-        if (canMakeSmores()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                return (checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED);
-            }
-        }
-        return true;
-    }
-
-    private boolean canMakeSmores() {
-        return (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1);
-    }
-
-    private void showMessageOKCancel(String message, DialogInterface.OnClickListener okListener) {
-        new AlertDialog.Builder(MainActivity.this)
-                .setMessage(message)
-                .setPositiveButton("OK", okListener)
-                .setNegativeButton("Cancel", null)
-                .create()
-                .show();
-    }
-    @TargetApi(Build.VERSION_CODES.M)
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-
-        switch (requestCode) {
-
-            case ALL_PERMISSIONS_RESULT:
-                for (String perms : permissionsToRequest) {
-                    if (!hasPermission(perms)) {
-                        permissionsRejected.add(perms);
-                    }
-                }
-
-                if (permissionsRejected.size() > 0) {
-
-
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (shouldShowRequestPermissionRationale(permissionsRejected.get(0))) {
-                            showMessageOKCancel("These permissions are mandatory for the application. Please allow access.",
-                                    new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                                                requestPermissions(permissionsRejected.toArray(new String[permissionsRejected.size()]), ALL_PERMISSIONS_RESULT);
-                                            }
-                                        }
-                                    });
-                            return;
-                        }
-                    }
-
-                }
-
-                break;
-        }
-
-    }
-    private void requestLocationUpdates() {
-        LocationRequest request = new LocationRequest();
-
-        //Specify how often your app should request the device’s location
-        request.setInterval(10000);
-
-        //Get the most accurate location data available//
-        request.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
-        final String path = "location";
-        int permission = ContextCompat.checkSelfPermission(this,
-                Manifest.permission.ACCESS_FINE_LOCATION);
-
-        //If the app currently has access to the location permission...//
-
-        if (permission == PackageManager.PERMISSION_GRANTED) {
-
-            //...then request location updates//
-            client.requestLocationUpdates(request, new LocationCallback() {
-                @Override
-                public void onLocationResult(LocationResult locationResult) {
-                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                    String name = user.getDisplayName();
-                    String id = user.getUid();
-                    //Get a reference to the database, so your app can perform read and write operations//
-                    DatabaseReference ref = FirebaseDatabase.getInstance().getReference().child(id);
-                    Location location = locationResult.getLastLocation();
-                    if (location != null) {
-
-//Save the location data to the database//
-
-                        ref.setValue(location);
-                    }
-                }
-            }, null);
-        }
-    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
         ButterKnife.bind(this);
         setSupportActionBar(mToolbar);
-        permissions.add(ACCESS_FINE_LOCATION);
-        permissions.add(ACCESS_COARSE_LOCATION);
-
-        permissionsToRequest = findUnAskedPermissions(permissions);
-        //get the permissions we have asked for before but are not granted..
-        //we will store this in a global list to access later.
-
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
-
-            if (permissionsToRequest.size() > 0)
-                requestPermissions(permissionsToRequest.toArray(new String[permissionsToRequest.size()]), ALL_PERMISSIONS_RESULT);
-        }
         // View model
         mViewModel = ViewModelProviders.of(this).get(MainActivityViewModel.class);
 
-        // Enable Firestore logging
-        FirebaseFirestore.setLoggingEnabled(true);
 
         // Access a Cloud Firestore instance from MainActivity
         mFirestore = FirebaseFirestore.getInstance();
-
-//         Get ${LIMIT} dogs
-        mQuery = mFirestore.collection("dogs")
+        firebaseAuth = FirebaseAuth.getInstance();
+//        // Get ${LIMIT} dogs
+        mQuery = mFirestore.collection(getString(R.string.collection_dogs))
                 .orderBy("distance", Query.Direction.ASCENDING)
                 .limit(LIMIT);
 
-//        // RecyclerView
+        // RecyclerView
         mAdapter = new DogAdapter(mQuery, this) {
             @Override
             protected void onDataChanged() {
@@ -282,46 +153,29 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
         // Filter Dialog
         mFilterDialog = new FilterDialogFragment();
-//        mDatabase = FirebaseDatabase.getInstance().getReference();
-//        DatabaseReference mRef = mDatabase.child("copyright");
-//        mRef.setValue("©2016 androidhive. All rights Reserved");
-        requestLocationUpdates();
-        locationTrack = new LocationTrack(MainActivity.this);
 
-
-        if (locationTrack.canGetLocation()) {
-
-            location = locationTrack.getLocation();
-            double longitude = locationTrack.getLongitude();
-            double latitude = locationTrack.getLatitude();
-
-           // Toast.makeText(getApplicationContext(), "Longitude:" + Double.toString(longitude) + "\nLatitude:" + Double.toString(latitude), Toast.LENGTH_SHORT).show();
-        } else {
-            locationTrack.showSettingsAlert();
-        }
+        getUsers();
     }
 
     @Override
     public void onStart() {
         super.onStart();
-
-        // Start sign in if necessary
+//
+//        // Start sign in if necessary
         if (shouldStartSignIn()) {
             startSignIn();
             return;
         }
-
-        // Apply filters
+//
+//        // Apply filters
         onFilter(mViewModel.getFilters());
 
         // Start listening for Firestore updates
         if (mAdapter != null) {
             mAdapter.startListening();
-           // Toast.makeText(getApplicationContext(), "onStart", Toast.LENGTH_SHORT).show();
-
         }
     }
-
+//
     @Override
     public void onStop() {
         super.onStop();
@@ -335,12 +189,13 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return super.onCreateOptionsMenu(menu);
     }
-
+//
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        Toast.makeText(getApplicationContext(), "onActivityResult", Toast.LENGTH_SHORT).show();
-
         switch (item.getItemId()) {
+            case R.id.menu_map:
+                show_on_map();
+                break;
             case R.id.menu_add_dog:
                 onAddDogClicked();
                 break;
@@ -348,39 +203,98 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 onMyDogsClicked();
                 break;
             case R.id.menu_sign_out:
-                AuthUI.getInstance().signOut(this);
-                startSignIn();
+                signOut();
                 break;
         }
         return super.onOptionsItemSelected(item);
     }
+    private void show_on_map()
+    {
+        UserListFragment fragment = UserListFragment.newInstance();
+        Bundle bundle = new Bundle();
+        bundle.putParcelableArrayList(getString(R.string.intent_user_list), mUserList);
+        bundle.putParcelableArrayList(getString(R.string.intent_user_locations), mUserLocations);
+        fragment.setArguments(bundle);
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        transaction.setCustomAnimations(R.anim.slide_in_up, R.anim.slide_out_up);
+        transaction.replace(R.id.user_list_container, fragment, getString(R.string.fragment_user_list));
+        transaction.addToBackStack(getString(R.string.fragment_user_list));
+        transaction.commit();
+    }
+    private void getUsers(){
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Toast.makeText(getApplicationContext(), "onActivityResult", Toast.LENGTH_SHORT).show();
+        CollectionReference usersRef = mFirestore
+                .collection(getString(R.string.collection_users));
 
-        if (requestCode == RC_SIGN_IN) {
-            IdpResponse response = IdpResponse.fromResultIntent(data);
-            mViewModel.setIsSigningIn(false);
+        mUserListEventListener = usersRef
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override
+                    public void onEvent(@javax.annotation.Nullable QuerySnapshot queryDocumentSnapshots, @javax.annotation.Nullable FirebaseFirestoreException e) {
+                        if (e != null) {
+                            Log.e(TAG, "onEvent: Listen failed.", e);
+                            return;
+                        }
 
-            if (resultCode != RESULT_OK) {
-                if (response == null) {
-                    // User pressed the back button.
-                    finish();
-                } else if (response.getError() != null
-                        && response.getError().getErrorCode() == ErrorCodes.NO_NETWORK) {
-                    showSignInErrorDialog(R.string.message_no_network);
-                } else {
-                    showSignInErrorDialog(R.string.message_unknown);
+                        if(queryDocumentSnapshots != null){
+
+                            // Clear the list and add all the users again
+                            mUserList.clear();
+                            mUserList = new ArrayList<>();
+
+                            for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                                User user = doc.toObject(User.class);
+                                mUserList.add(user);
+                                getUserLocation(user);
+                            }
+
+                            Log.d(TAG, "onEvent: user list size: " + mUserList.size());
+                        }
+                    }
+                });
+    }
+    private void getUserLocation(User user){
+        DocumentReference locationsRef = mFirestore
+                .collection(getString(R.string.collection_user_locations))
+                .document(user.getUser_id());
+
+        locationsRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+
+                if(task.isSuccessful()){
+                    if(task.getResult().toObject(UserLocation.class) != null){
+
+                        mUserLocations.add(task.getResult().toObject(UserLocation.class));
+                    }
                 }
             }
-        }
+        });
+
     }
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//        if (requestCode == RC_SIGN_IN) {
+////            IdpResponse response = IdpResponse.fromResultIntent(data);
+//            mViewModel.setIsSigningIn(false);
+//
+//            if (resultCode != RESULT_OK) {
+//                if (response == null) {
+//                    // User pressed the back button.
+//                    finish();
+//                } else if (response.getError() != null
+//                        && response.getError().getErrorCode() == ErrorCodes.NO_NETWORK) {
+//                    showSignInErrorDialog(R.string.message_no_network);
+//                } else {
+//                    showSignInErrorDialog(R.string.message_unknown);
+//                }
+//            }
+//        }
+//    }
 
     @OnClick(R.id.filter_bar)
     public void onFilterClicked() {
-//         Show the dialog containing filter options
+        // Show the dialog containing filter options
         mFilterDialog.show(getSupportFragmentManager(), FilterDialogFragment.TAG);
     }
 
@@ -399,7 +313,7 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     @Override
     public void onFilter(Filters filters) {
         // Construct query basic query
-        Query query = mFirestore.collection("dogs");
+        Query query = mFirestore.collection(getString(R.string.collection_dogs));
 
         // Breed (equality filter)
         if (filters.hasBreed()) {
@@ -433,43 +347,30 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
     private boolean shouldStartSignIn() {
         return (!mViewModel.getIsSigningIn() && FirebaseAuth.getInstance().getCurrentUser() == null);
     }
-
+//
     private void startSignIn() {
-        // Sign in with FirebaseUI
-        Toast.makeText(getApplicationContext(), "startSignIn", Toast.LENGTH_SHORT).show();
-
-        Intent intent = AuthUI.getInstance().createSignInIntentBuilder()
-                .setAvailableProviders(Collections.singletonList(
-                        new AuthUI.IdpConfig.EmailBuilder().build()))
-                .setIsSmartLockEnabled(false)
-                .build();
-
-        startActivityForResult(intent, RC_SIGN_IN);
+//        // Sign in with FirebaseUI
+//        Intent intent = AuthUI.getInstance().createSignInIntentBuilder()
+//                .setAvailableProviders(Collections.singletonList(
+//                        new AuthUI.IdpConfig.EmailBuilder().build()))
+//                .setIsSmartLockEnabled(false)
+//                .build();
+//
+//        startActivityForResult(intent, RC_SIGN_IN);
         mViewModel.setIsSigningIn(true);
     }
 
-//    private void addUserToDataBase() {
-//        User user = new User(FirebaseAuth.getInstance().getCurrentUser());
-
-//        CollectionReference users = mFirestore.collection("users");
-//
-//        // Check if the user is already in the database by querying for its id
-//        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-//        if (user != null) {
-//            String name = user.getDisplayName();
-//            String email = user.getEmail();
-//        }
-//
-////        Map<String, Object> newUser = new HashMap<>();
-////        newUser.put("name", user.getDisplayName());
-////        newUser.put("email", user.getEmail());
-////        users.document(user.getUid()).set(newUser);
-//    }
-
+    private void signOut(){
+        FirebaseAuth.getInstance().signOut();
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
     private void onAddDogClicked() {
         // Go to registration page
         Intent intent = new Intent(this, SignUpActivity.class);
-        intent.putExtra("location",location);
+
         startActivity(intent);
 //        overridePendingTransition(R.anim.slide_in_from_right, R.anim.slide_out_to_left);
 
@@ -481,29 +382,226 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
 
 
-    private void showSignInErrorDialog(@StringRes int message) {
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(R.string.title_sign_in_error)
-                .setMessage(message)
-                .setCancelable(false)
-                .setPositiveButton(R.string.option_retry, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        startSignIn();
-                    }
-                })
-                .setNegativeButton(R.string.option_exit, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        finish();
-                    }
-                }).create();
+//    private void showSignInErrorDialog(@StringRes int message) {
+//        AlertDialog dialog = new AlertDialog.Builder(this)
+//                .setTitle(R.string.title_sign_in_error)
+//                .setMessage(message)
+//                .setCancelable(false)
+//                .setPositiveButton(R.string.option_retry, new DialogInterface.OnClickListener() {
+//                    @Override
+//                    public void onClick(DialogInterface dialogInterface, int i) {
+//                        startSignIn();
+//                    }
+//                })
+//                .setNegativeButton(R.string.option_exit, new DialogInterface.OnClickListener() {
+//                    @Override
+//                    public void onClick(DialogInterface dialogInterface, int i) {
+//                        finish();
+//                    }
+//                }).create();
+//
+//        dialog.show();
+//    }
 
-        dialog.show();
+    private void getLocationPermission() {
+        /*
+         * Request location permission, so that we can get the location of the
+         * device. The result of the permission request is handled by a callback,
+         * onRequestPermissionsResult.
+         */
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = true;
+            getUserDetails();
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+        }
+    }
+    private void startLocationService(){
+        if(!isLocationServiceRunning()){
+            Intent serviceIntent = new Intent(this, LocationService.class);
+//        this.startService(serviceIntent);
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O){
+
+                MainActivity.this.startForegroundService(serviceIntent);
+            }else{
+                startService(serviceIntent);
+            }
+        }
+    }
+    private boolean isLocationServiceRunning() {
+        ActivityManager manager = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)){
+            if("com.example.android.doggie.services.LocationService".equals(service.service.getClassName())) {
+                Log.d(TAG, "isLocationServiceRunning: location service is already running.");
+                return true;
+            }
+        }
+        Log.d(TAG, "isLocationServiceRunning: location service is not running.");
+        return false;
+    }
+    private void getUserDetails(){
+        if(mUserLocation == null){
+            mUserLocation = new UserLocation();
+            DocumentReference userRef = mFirestore.collection(getString(R.string.collection_users))
+                    .document(FirebaseAuth.getInstance().getUid());
+
+            userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                @Override
+                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                    if(task.isSuccessful()){
+                        Log.d(TAG, "onComplete: successfully set the user client.");
+                        User user = task.getResult().toObject(User.class);
+                        mUserLocation.setUser(user);
+                        ((UserClient)(getApplicationContext())).setUser(user);
+                        getLastKnownLocation();
+                    }
+                }
+            });
+        }
+        else{
+            getLastKnownLocation();
+        }
+    }
+
+    private void getLastKnownLocation() {
+        Log.d(TAG, "getLastKnownLocation: called.");
+
+
+        if (ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        mFusedLocationClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<android.location.Location>() {
+            @Override
+            public void onComplete(@NonNull Task<android.location.Location> task) {
+                if (task.isSuccessful()) {
+                    Location location = task.getResult();
+                    GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
+                    mUserLocation.setGeo_point(geoPoint);
+                    mUserLocation.setTimestamp(null);
+                    saveUserLocation();
+                    startLocationService();
+
+                }
+            }
+        });
+
+    }
+
+    private void saveUserLocation(){
+
+        if(mUserLocation != null){
+            DocumentReference locationRef = mFirestore
+                    .collection(getString(R.string.collection_user_locations))
+                    .document(FirebaseAuth.getInstance().getUid());
+
+            locationRef.set(mUserLocation).addOnCompleteListener(new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+                    if(task.isSuccessful()){
+                        Log.d(TAG, "saveUserLocation: \ninserted user location into database." +
+                                "\n latitude: " + mUserLocation.getGeo_point().getLatitude() +
+                                "\n longitude: " + mUserLocation.getGeo_point().getLongitude());
+                    }
+                }
+            });
+        }
+    }
+
+    private void buildAlertMessageNoGps() {
+        final android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        builder.setMessage("This application requires GPS to work properly, do you want to enable it?")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(@SuppressWarnings("unused") final DialogInterface dialog, @SuppressWarnings("unused") final int id) {
+                        Intent enableGpsIntent = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                        startActivityForResult(enableGpsIntent, PERMISSIONS_REQUEST_ENABLE_GPS);
+                    }
+                });
+        final android.app.AlertDialog alert = builder.create();
+        alert.show();
+    }
+    public boolean isMapsEnabled(){
+        final LocationManager manager = (LocationManager) getSystemService( Context.LOCATION_SERVICE );
+        if (manager == null) {
+            buildAlertMessageNoGps();
+            return false;
+        }
+        if (!manager.isProviderEnabled( LocationManager.GPS_PROVIDER ) ) {
+            buildAlertMessageNoGps();
+            return false;
+        }
+        return true;
+    }
+    private boolean checkMapServices(){
+        if(isServicesOK()){
+            if(isMapsEnabled()){
+                return true;
+            }
+        }
+        return false;
+    }
+    public boolean isServicesOK(){
+        Log.d(TAG, "isServicesOK: checking google services version");
+
+        int available = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(MainActivity.this);
+
+        if(available == ConnectionResult.SUCCESS){
+            //everything is fine and the user can make map requests
+            Log.d(TAG, "isServicesOK: Google Play Services is working");
+            return true;
+        }
+        else if(GoogleApiAvailability.getInstance().isUserResolvableError(available)){
+            //an error occured but we can resolve it
+            Log.d(TAG, "isServicesOK: an error occured but we can fix it");
+            Dialog dialog = GoogleApiAvailability.getInstance().getErrorDialog(MainActivity.this, available, ERROR_DIALOG_REQUEST);
+            dialog.show();
+        }else{
+            Toast.makeText(this, "You can't make map requests", Toast.LENGTH_SHORT).show();
+        }
+        return false;
     }
 
     @Override
-    public void onLocationChanged(Location location) {
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        mLocationPermissionGranted = false;
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    mLocationPermissionGranted = true;
+                }
+            }
+        }
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(checkMapServices()){
+            if(mLocationPermissionGranted){
+                getUserDetails();
+            }
+            else{
+                getLocationPermission();
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        if(mUserListEventListener != null){
+            mUserListEventListener.remove();
+        }
     }
 }

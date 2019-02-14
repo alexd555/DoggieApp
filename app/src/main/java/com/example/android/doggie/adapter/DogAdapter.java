@@ -10,7 +10,7 @@ import android.widget.TextView;
 import com.bumptech.glide.Glide;
 
 import com.example.android.doggie.R;
-import com.example.android.doggie.model.Dog;
+import com.example.android.doggie.models.Dog;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.Query;
 
@@ -86,8 +86,10 @@ public class DogAdapter extends FirestoreAdapter<DogAdapter.ViewHolder> {
 
             nameView.setText(dog.getDogName());
             genderView.setText(dog.getGender());
-            ageView.setText(resources.getQuantityString(R.plurals.fmt_dog_age, dog.getAge(), dog.getAge()));
-            distanceView.setText(resources.getString(R.string.fmt_distance, new Object[]{dog.getDistance()}));
+            ageView.setText(resources.getQuantityString(R.plurals.fmt_dog_age, dog.getAge(),
+                    dog.getAge()));
+            distanceView.setText(resources.getString(R.string.fmt_distance,
+                    new Object[]{dog.getDistance()}));
             breedView.setText(dog.getBreed());
             weightView.setText(resources.getString(R.string.fmt_weight, dog.getWeight()));
 
