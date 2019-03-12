@@ -150,6 +150,14 @@
         <item>@string/sort_by_weight</item>
     </string-array>
 
+    <string name="loading">Loading…</string>
+    <string name="signed_out">Signed Out</string>
+    <string name="desc_firebase_lockup">Firebase logo and name</string>
+    <string name="facebook_title_text">Facebook Login</string>
 
+    <string name="facebook_status_fmt">Facebook User: %s</string>
+    <string name="firebase_status_fmt">Firebase User: %s</string>
 
+    <string name="facebook_app_id">2315800118700897</string>
+    <string name="facebook_application_id">2315800118700897</string>
 </resources>

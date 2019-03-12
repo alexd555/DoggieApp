@@ -87,9 +87,12 @@ dependencies {
     // Google Maps Services (needed for directions)
     implementation 'com.google.maps:google-maps-services:0.2.9'
     implementation 'org.slf4j:slf4j-nop:1.7.25'
+
+    //facebook auth
+    implementation 'com.facebook.android:facebook-android-sdk:[4,5)'
 }
 
 apply plugin: 'com.google.gms.google-services'
 com.google.gms.googleservices.GoogleServicesPlugin.config.disableVersionCheck = true
-//android.defaultConfig.vectorDrawables.useSupportLibrary = true
+android.defaultConfig.vectorDrawables.useSupportLibrary = true
 

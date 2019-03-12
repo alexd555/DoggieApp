@@ -35,6 +35,8 @@ import com.example.android.doggie.models.User;
 import com.example.android.doggie.models.UserLocation;
 import com.example.android.doggie.services.LocationService;
 import com.example.android.doggie.viewmodel.MainActivityViewModel;
+import com.facebook.FacebookSdk;
+import com.facebook.login.LoginManager;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -42,6 +44,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -359,9 +362,20 @@ public class MainActivity extends AppCompatActivity implements
 //        startActivityForResult(intent, RC_SIGN_IN);
         mViewModel.setIsSigningIn(true);
     }
-
+    private boolean isFacebookSigned()
+    {
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        FirebaseUser user = mAuth.getCurrentUser();
+        if(user == null || user.getProviders() == null)
+            return false;
+        String provider = user.getProviders().get(0);
+        return provider.equals("facebook.com");
+    }
     private void signOut(){
         FirebaseAuth.getInstance().signOut();
+        if (isFacebookSigned()) {
+            LoginManager.getInstance().logOut();
+        }
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
