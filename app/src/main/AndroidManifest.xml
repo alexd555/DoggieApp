@@ -38,6 +38,7 @@
 
         <activity android:name=".RegisterActivity" />
         <activity android:name=".ResetPasswordActivity" />
+        <activity android:name=".UserProfileActivity" />
         <!--<activity android:name=".BaseActivity" />-->
         <!--<activity android:name=".FacebookLoginActivity" />-->
         <!--<activity android:name=".LoginActivity" />-->

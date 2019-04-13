@@ -3,7 +3,6 @@
     <string name="google_maps_api_key">AIzaSyDnSUoYgc89XVzQOam4vZU3PUWVXU4Q-LQ</string>
 
     <string name="show_on_map">Show on Map</string>
-    <string name="fragment_user_list">User List</string>
     <!-- Strings related to login -->
     <string name="prompt_email">Email</string>
     <string name="prompt_password">Password (optional)</string>
@@ -18,11 +17,20 @@
     <string name="forgot_password">Forgot Password</string>
     <string name="register">Register</string>
     <string name="sign_in">Sign In</string>
+    <string name="emailpassword_title_text">Email and Password</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="create_account">Create Account</string>
+    <string name="verify_email">Verify Email</string>
+    <string name="auth_failed">Authentication failed</string>
+    <string name="emailpassword_status_fmt">Email User: %1$s (verified: %2$b)</string>
+    <string name="label_emailpassword">Email/Password Authentication</string>
     <string name="password">Password</string>
     <string name="tabian_consulting_logo">Tabian Consulting Logo</string>
     <string name="email_registration">Email Registration</string>
     <string name="email">Email</string>
     <string name="confirm_password">Confirm Password</string>
+    <string name="my_dogs_only">My Dogs Only</string>
 
     <!-- Firestore Strings -->
     <string name="collection_users">Users</string>
@@ -58,7 +66,7 @@
         <item quantity="other">(%d years old)</item>
     </plurals>
     <string name="fmt_distance">%s km</string>
-    <string name="fmt_weight">%d kg</string>
+    <string name="fmt_weight">%.01f kg</string>
 
     <string name="sort_by_distance">Sort by Distance</string>
     <string name="sort_by_age">Sort by Age</string>
@@ -160,4 +168,8 @@
 
     <string name="facebook_app_id">2315800118700897</string>
     <string name="facebook_application_id">2315800118700897</string>
+
+    <!-- Fragments Names -->
+    <string name="fragment_user_list">User List</string>
+    <string name="fragment_image_list">Image List</string>
 </resources>

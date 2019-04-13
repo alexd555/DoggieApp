@@ -3,14 +3,16 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
+        android:id="@+id/menu_profile"
+        android:title="profile" />
+
+    <item
         android:id="@+id/menu_map"
         android:title="@string/show_on_map" />
     <item
         android:id="@+id/menu_add_dog"
         android:title="@string/header_register_dog" />
-    <item
-        android:id="@+id/menu_my_dogs"
-        android:title="My Dogs" />
+
     <item
         android:id="@+id/menu_sign_out"
         android:title="@string/sign_out" />

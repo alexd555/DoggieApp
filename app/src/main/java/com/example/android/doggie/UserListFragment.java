@@ -3,7 +3,8 @@ package com.example.android.doggie;
 import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
+import android.graphics.Color;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -11,16 +12,18 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.RelativeLayout;
+import android.widget.SeekBar;
 
-import com.example.android.doggie.adapter.UserRecyclerAdapter;
+import com.example.android.doggie.adapter.ChatMessageRecyclerAdapter;
+import com.example.android.doggie.models.ChatMessage;
 import com.example.android.doggie.models.ClusterMarker;
 import com.example.android.doggie.models.PolylineData;
 import com.example.android.doggie.models.User;
@@ -35,14 +38,23 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.maps.DirectionsApiRequest;
 import com.google.maps.GeoApiContext;
 import com.google.maps.PendingResult;
@@ -52,9 +64,12 @@ import com.google.maps.model.DirectionsResult;
 import com.google.maps.model.DirectionsRoute;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.example.android.doggie.Constants.MAPVIEW_BUNDLE_KEY;
+import static com.facebook.FacebookSdk.getApplicationContext;
 
 public class UserListFragment extends Fragment implements
         OnMapReadyCallback,
@@ -69,7 +84,9 @@ public class UserListFragment extends Fragment implements
 
 
     //widgets
-    private RecyclerView mUserListRecyclerView;
+    private RecyclerView mChatMessageRecyclerView;
+    private EditText mMessage;
+
     private MapView mMapView;
     private RelativeLayout mMapContainer;
 
@@ -77,8 +94,13 @@ public class UserListFragment extends Fragment implements
     //vars
     private ArrayList<User> mUserList = new ArrayList<>();
     private ArrayList<UserLocation> mUserLocations = new ArrayList<>();
-    private UserRecyclerAdapter mUserRecyclerAdapter;
+    private ChatMessageRecyclerAdapter mChatMessageRecyclerAdapter;
+    private ArrayList<ChatMessage> mMessages = new ArrayList<>();
     private GoogleMap mGoogleMap;
+    private SeekBar mFillHueBar;
+    private float choosenRadius; //in meters
+    private Polygon mCirclePolygon;
+
     private UserLocation mUserPosition;
     private LatLngBounds mMapBoundary;
     private ClusterManager<ClusterMarker> mClusterManager;
@@ -88,32 +110,15 @@ public class UserListFragment extends Fragment implements
     private GeoApiContext mGeoApiContext;
     private ArrayList<PolylineData> mPolyLinesData = new ArrayList<>();
     private Marker mSelectedMarker = null;
+    private ListenerRegistration mChatMessageEventListener, mUserListEventListener;
+    private static final int EARTH_RADIUS = 6371; // in km
 
+    private Set<String> mMessageIds = new HashSet<>();
 
     public static UserListFragment newInstance() {
         return new UserListFragment();
     }
 
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//        if (requestCode == RC_SIGN_IN) {
-////            IdpResponse response = IdpResponse.fromResultIntent(data);
-//            mViewModel.setIsSigningIn(false);
-//
-//            if (resultCode != RESULT_OK) {
-//                if (response == null) {
-//                    // User pressed the back button.
-//                    finish();
-//                } else if (response.getError() != null
-//                        && response.getError().getErrorCode() == ErrorCodes.NO_NETWORK) {
-//                    showSignInErrorDialog(R.string.message_no_network);
-//                } else {
-//                    showSignInErrorDialog(R.string.message_unknown);
-//                }
-//            }
-//        }
-//    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -134,10 +139,44 @@ public class UserListFragment extends Fragment implements
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_user_list, container, false);
-        mUserListRecyclerView = view.findViewById(R.id.user_list_recycler_view);
+        mMessage = view.findViewById(R.id.input_message);
+        mChatMessageRecyclerView = view.findViewById(R.id.chatmessage_recycler_view);
+        view.findViewById(R.id.checkmark).setOnClickListener(this);
+
+
         mMapView = view.findViewById(R.id.user_list_map);
         view.findViewById(R.id.btn_full_screen_map).setOnClickListener(this);
         mMapContainer = view.findViewById(R.id.map_container);
+        mFillHueBar = (SeekBar) view.findViewById(R.id.fillHueSeekBar);
+        mFillHueBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                choosenRadius = ((float)progress/100)*1000;
+
+                if (mUserPosition == null || mUserPosition.getGeo_point() == null)
+                    return;
+                mCirclePolygon.remove();
+                mCirclePolygon = mGoogleMap.addPolygon(new PolygonOptions()
+                        .fillColor(Color.TRANSPARENT)
+                        .addAll(createOuterBounds())
+                        .addHole(createHole(
+                                new LatLng(mUserPosition.getGeo_point().getLatitude(),
+                                        mUserPosition.getGeo_point().getLongitude()), choosenRadius))
+                        .strokeWidth(10));
+                Log.d(TAG, "progress "+progress);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
 
         initUserListRecyclerView();
         initGoogleMap(savedInstanceState);
@@ -151,6 +190,7 @@ public class UserListFragment extends Fragment implements
     private Runnable mRunnable;
     private static final int LOCATION_UPDATE_INTERVAL = 3000;
 
+    // GPS RealTime location
     private void startUserLocationsRunnable(){
         Log.d(TAG, "startUserLocationsRunnable: starting runnable for retrieving updated locations.");
         mHandler.postDelayed(mRunnable = new Runnable() {
@@ -174,19 +214,22 @@ public class UserListFragment extends Fragment implements
 
                 DocumentReference userLocationRef = FirebaseFirestore.getInstance()
                         .collection(getString(R.string.collection_user_locations))
-                        .document(clusterMarker.getUser().getUser_id());
+                        .document(clusterMarker.getUser().getUserId());
 
                 userLocationRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
                     public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                        if(task.isSuccessful()){
+                        if(task.isSuccessful() &&  task.getResult()!=null){
 
-                            final UserLocation updatedUserLocation = task.getResult().toObject(UserLocation.class);
+                            final UserLocation updatedUserLocation =
+                                    task.getResult().toObject(UserLocation.class);
 
                             // update the location
                             for (int i = 0; i < mClusterMarkers.size(); i++) {
                                 try {
-                                    if (mClusterMarkers.get(i).getUser().getUser_id().equals(updatedUserLocation.getUser().getUser_id())) {
+                                    if (updatedUserLocation!=null && updatedUserLocation.getUser()!=null &&
+                                            mClusterMarkers.get(i).getUser().getUserId().
+                                            equals(updatedUserLocation.getUser().getUserId())) {
 
                                         LatLng updatedLatLng = new LatLng(
                                                 updatedUserLocation.getGeo_point().getLatitude(),
@@ -194,6 +237,9 @@ public class UserListFragment extends Fragment implements
                                         );
 
                                         mClusterMarkers.get(i).setPosition(updatedLatLng);
+
+                                        mClusterMarkers.get(i).setIconPath(updatedUserLocation.getUser().getImagePath());
+//
                                         mClusterManagerRenderer.setUpdateMarker(mClusterMarkers.get(i));
                                     }
 
@@ -211,13 +257,20 @@ public class UserListFragment extends Fragment implements
         }
 
     }
-
+    private Location geo2Loc(UserLocation userLocation, String nameLoc)
+    {
+        Location loc = new Location(nameLoc);
+        loc.setLongitude(userLocation.getGeo_point().getLongitude());
+        loc.setLatitude(userLocation.getGeo_point().getLatitude());
+        return loc;
+    }
     private void addMapMarkers(){
 
         if(mGoogleMap != null){
 
-            if(mClusterManager == null){
-                mClusterManager = new ClusterManager<ClusterMarker>(getActivity().getApplicationContext(), mGoogleMap);
+            if(mClusterManager == null && getActivity()!=null){
+                mClusterManager = new ClusterManager<>(getActivity().getApplicationContext(),
+                        mGoogleMap);
             }
             if(mClusterManagerRenderer == null){
                 mClusterManagerRenderer = new MyClusterManagerRenderer(
@@ -228,30 +281,27 @@ public class UserListFragment extends Fragment implements
                 mClusterManager.setRenderer(mClusterManagerRenderer);
             }
             mGoogleMap.setOnInfoWindowClickListener(this);
+            Location myLoc = geo2Loc(mUserPosition, "my location");
 
             for(UserLocation userLocation: mUserLocations){
 
                 Log.d(TAG, "addMapMarkers: location: " + userLocation.getGeo_point().toString());
                 try{
                     String snippet = "";
-                    if(userLocation.getUser().getUser_id().equals(FirebaseAuth.getInstance().getUid())){
+                    if(userLocation.getUser().getUserId().equals(FirebaseAuth.getInstance().getUid())){
                         snippet = "This is you";
                     }
                     else{
                         snippet = "Determine route to " + userLocation.getUser().getUsername() + "?";
                     }
-
-                    int avatar = R.drawable.cartman_cop; // set the default avatar
-                    try{
-                        avatar = Integer.parseInt(userLocation.getUser().getAvatar());
-                    }catch (NumberFormatException e){
-                        Log.d(TAG, "addMapMarkers: no avatar for " + userLocation.getUser().getUsername() + ", setting default.");
-                    }
+//                    Location loc = geo2Loc(userLocation, "other location");
+//                    if (myLoc.distanceTo(loc) > choosenRadius)
+//                        continue;
                     ClusterMarker newClusterMarker = new ClusterMarker(
                             new LatLng(userLocation.getGeo_point().getLatitude(), userLocation.getGeo_point().getLongitude()),
                             userLocation.getUser().getUsername(),
                             snippet,
-                            avatar,
+                            userLocation.getUser().getImagePath(),
                             userLocation.getUser()
                     );
                     mClusterManager.addItem(newClusterMarker);
@@ -290,12 +340,11 @@ public class UserListFragment extends Fragment implements
 
     private void setUserPosition() {
         for (UserLocation userLocation : mUserLocations) {
-            if (userLocation.getUser().getUser_id().equals(FirebaseAuth.getInstance().getUid())) {
+            if (userLocation!=null && userLocation.getUser().getUserId().equals(FirebaseAuth.getInstance().getUid())) {
                 mUserPosition = userLocation;
             }
         }
     }
-
     private void initGoogleMap(Bundle savedInstanceState) {
         // *** IMPORTANT ***
         // MapView requires that the Bundle you pass contain _ONLY_ MapView SDK
@@ -315,11 +364,71 @@ public class UserListFragment extends Fragment implements
                     .build();
         }
     }
+    private void getChatMessages(){
 
+        CollectionReference messagesRef = FirebaseFirestore.getInstance()
+                .collection(getString(R.string.collection_chat_messages));
+
+        mChatMessageEventListener = messagesRef
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override
+                    public void onEvent(@javax.annotation.Nullable QuerySnapshot queryDocumentSnapshots, @javax.annotation.Nullable FirebaseFirestoreException e) {
+                        if (e != null) {
+                            Log.e(TAG, "onEvent: Listen failed.", e);
+                            return;
+                        }
+                        Location myLoc = geo2Loc(mUserPosition, "my location");
+                        if(queryDocumentSnapshots != null){
+                            for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                                UserLocation otherUserLocation = null;
+                                ChatMessage message = doc.toObject(ChatMessage.class);
+//                                for (UserLocation userLocation: mUserLocations)
+//                                    if (userLocation.getUser().getUserId().equals(message.getUser().getUserId()))
+//                                    {
+//                                        otherUserLocation = userLocation;
+//                                    }
+//                                Location loc = geo2Loc(otherUserLocation, "other location");
+//                                if (myLoc.distanceTo(loc) > choosenRadius)
+//                                    continue;
+                                if(!mMessageIds.contains(message.getMessage_id())){
+                                    mMessageIds.add(message.getMessage_id());
+                                    mMessages.add(message);
+                                    mChatMessageRecyclerView.smoothScrollToPosition(mMessages.size() - 1);
+                                }
+
+                            }
+                            mChatMessageRecyclerAdapter.notifyDataSetChanged();
+
+                        }
+                    }
+                });
+    }
     private void initUserListRecyclerView() {
-        mUserRecyclerAdapter = new UserRecyclerAdapter(mUserList);
-        mUserListRecyclerView.setAdapter(mUserRecyclerAdapter);
-        mUserListRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+
+        mChatMessageRecyclerAdapter = new ChatMessageRecyclerAdapter(mMessages, getActivity());
+        mChatMessageRecyclerView.setAdapter(mChatMessageRecyclerAdapter);
+        mChatMessageRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+
+        mChatMessageRecyclerView.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v,
+                                       int left, int top, int right, int bottom,
+                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                if (bottom < oldBottom) {
+                    mChatMessageRecyclerView.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(mMessages.size() > 0){
+                                mChatMessageRecyclerView.smoothScrollToPosition(
+                                        mChatMessageRecyclerView.getAdapter().getItemCount() - 1);
+                            }
+
+                        }
+                    }, 100);
+                }
+            }
+        });
     }
 
     @Override
@@ -340,6 +449,7 @@ public class UserListFragment extends Fragment implements
         super.onResume();
         mMapView.onResume();
         startUserLocationsRunnable(); // update user locations every 'LOCATION_UPDATE_INTERVAL'
+        getChatMessages();
     }
 
     @Override
@@ -354,19 +464,55 @@ public class UserListFragment extends Fragment implements
         mMapView.onStop();
     }
 
+    private static List<LatLng> createOuterBounds() {
+        final float delta = 0.01f;
+
+        return new ArrayList<LatLng>() {{
+            add(new LatLng(90 - delta, -180 + delta));
+            add(new LatLng(0, -180 + delta));
+            add(new LatLng(-90 + delta, -180 + delta));
+            add(new LatLng(-90 + delta, 0));
+            add(new LatLng(-90 + delta, 180 - delta));
+            add(new LatLng(0, 180 - delta));
+            add(new LatLng(90 - delta, 180 - delta));
+            add(new LatLng(90 - delta, 0));
+            add(new LatLng(90 - delta, -180 + delta));
+        }};
+    }
+    private static Iterable <LatLng> createHole(LatLng center, float radius) {
+        int points = 50; // number of corners of inscribed polygon
+
+        double radiusLatitude = Math.toDegrees(radius / (float) EARTH_RADIUS);
+        double radiusLongitude = radiusLatitude / Math.cos(Math.toRadians(center.latitude));
+
+        List<LatLng> result = new ArrayList<>(points);
+
+        double anglePerCircleRegion = 2 * Math.PI / points;
+
+        for (int i = 0; i < points; i++) {
+            double theta = i * anglePerCircleRegion;
+            double latitude = center.latitude + (radiusLatitude * Math.sin(theta));
+            double longitude = center.longitude + (radiusLongitude * Math.cos(theta));
+
+            result.add(new LatLng(latitude, longitude));
+        }
+
+        return result;
+    }
     @Override
     public void onMapReady(GoogleMap map) {
-//        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
-//                != PackageManager.PERMISSION_GRANTED
-//                && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION)
-//                != PackageManager.PERMISSION_GRANTED) {
-//            return;
-//        }
-//        map.setMyLocationEnabled(true);
-//        mGoogleMap = map;
-//        setCameraView();
-
+        Log.d(TAG, "running onMapReady");
         mGoogleMap = map;
+
+        if (mUserPosition == null || mUserPosition.getGeo_point() == null)
+            return;
+        mCirclePolygon = mGoogleMap.addPolygon(new PolygonOptions()
+                .fillColor(Color.TRANSPARENT)
+                .addAll(createOuterBounds())
+                .addHole(createHole(
+                        new LatLng(mUserPosition.getGeo_point().getLatitude(),
+                                mUserPosition.getGeo_point().getLongitude()), 0.05f))
+                .strokeWidth(10));
         addMapMarkers();
         mGoogleMap.setOnPolylineClickListener(this);
     }
@@ -399,7 +545,8 @@ public class UserListFragment extends Fragment implements
                 100);
         mapAnimation.setDuration(800);
 
-        ViewWeightAnimationWrapper recyclerAnimationWrapper = new ViewWeightAnimationWrapper(mUserListRecyclerView);
+        ViewWeightAnimationWrapper recyclerAnimationWrapper =
+                new ViewWeightAnimationWrapper(mChatMessageRecyclerView);
         ObjectAnimator recyclerAnimation = ObjectAnimator.ofFloat(recyclerAnimationWrapper,
                 "weight",
                 50,
@@ -415,18 +562,51 @@ public class UserListFragment extends Fragment implements
         ObjectAnimator mapAnimation = ObjectAnimator.ofFloat(mapAnimationWrapper,
                 "weight",
                 100,
-                50);
+                10);
         mapAnimation.setDuration(800);
 
-        ViewWeightAnimationWrapper recyclerAnimationWrapper = new ViewWeightAnimationWrapper(mUserListRecyclerView);
+        ViewWeightAnimationWrapper recyclerAnimationWrapper =
+                new ViewWeightAnimationWrapper(mChatMessageRecyclerView);
         ObjectAnimator recyclerAnimation = ObjectAnimator.ofFloat(recyclerAnimationWrapper,
                 "weight",
                 0,
-                50);
+                100);
         recyclerAnimation.setDuration(800);
 
         recyclerAnimation.start();
         mapAnimation.start();
+    }
+    private void insertNewMessage() {
+        String message = mMessage.getText().toString();
+
+        if (!message.equals("")) {
+            message = message.replaceAll(System.getProperty("line.separator"), "");
+
+            DocumentReference newMessageDoc = FirebaseFirestore.getInstance()
+                    .collection(getString(R.string.collection_chat_messages))
+                    .document();
+
+            ChatMessage newChatMessage = new ChatMessage();
+            newChatMessage.setMessage(message);
+            newChatMessage.setMessage_id(newMessageDoc.getId());
+
+            User user = ((UserClient) (getApplicationContext())).getUser();
+            Log.d(TAG, "insertNewMessage: retrieved user client: " + user.toString());
+            newChatMessage.setUser(user);
+
+            newMessageDoc.set(newChatMessage).addOnCompleteListener(new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+                    if (task.isSuccessful()) {
+                        clearMessage();
+                    }
+                }
+            });
+        }
+    }
+    private void clearMessage()
+        {
+        mMessage.setText("");
     }
 
     @Override
@@ -443,6 +623,9 @@ public class UserListFragment extends Fragment implements
                     contractMapAnimation();
                 }
                 break;
+            }
+            case R.id.checkmark:{
+                insertNewMessage();
             }
 
         }
@@ -529,7 +712,8 @@ public class UserListFragment extends Fragment implements
                 double duration = 999999999;
                 for(DirectionsRoute route: result.routes){
                     Log.d(TAG, "run: leg: " + route.legs[0].toString());
-                    List<com.google.maps.model.LatLng> decodedPath = PolylineEncoding.decode(route.overviewPolyline.getEncodedPath());
+                    List<com.google.maps.model.LatLng> decodedPath =
+                            PolylineEncoding.decode(route.overviewPolyline.getEncodedPath());
 
                     List<LatLng> newDecodedPath = new ArrayList<>();
 

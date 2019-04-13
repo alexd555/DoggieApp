@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@color/White">
 
     <LinearLayout
@@ -17,10 +17,44 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="50"
-            android:id="@+id/user_list_recycler_view">
+            android:id="@+id/chatmessage_recycler_view">
 
         </android.support.v7.widget.RecyclerView>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/grey_border_top">
 
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:src="@drawable/ic_check_green_24dp"
+                android:id="@+id/checkmark"/>
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/input_message"
+                android:background="@null"
+                android:layout_toLeftOf="@+id/checkmark"
+                android:gravity="center_vertical"
+                android:textSize="14sp"
+                android:hint="new message..."
+                android:textColor="@color/Black"
+                android:layout_marginLeft="5dp"/>
+
+
+        </RelativeLayout>
+
+        <!--<FrameLayout-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--android:id="@+id/user_list_container">-->
+
+        <!--</FrameLayout>-->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -32,7 +66,18 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/user_list_map" />
-
+            <TableLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1">
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+                <TextView android:text="Radius(m)" />
+                <SeekBar android:id="@+id/fillHueSeekBar" />
+            </TableRow>
+            </TableLayout>
             <ImageButton
                 android:layout_width="35dp"
                 android:layout_height="35dp"

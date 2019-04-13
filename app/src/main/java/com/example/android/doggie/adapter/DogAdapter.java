@@ -2,6 +2,7 @@ package com.example.android.doggie.adapter;
 
 import android.content.res.Resources;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,9 @@ import com.example.android.doggie.R;
 import com.example.android.doggie.models.Dog;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.Query;
+
+import org.joda.time.LocalDate;
+import org.joda.time.Months;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -81,13 +85,30 @@ public class DogAdapter extends FirestoreAdapter<DogAdapter.ViewHolder> {
             Resources resources = itemView.getResources();
 
             // Load image
-//            Glide.with(imageView.getContext()).load(dog.getImageAddress()).into(imageView);
             Glide.with(imageView.getContext()).load(dog.getImage()).into(imageView);
 
             nameView.setText(dog.getDogName());
             genderView.setText(dog.getGender());
-            ageView.setText(resources.getQuantityString(R.plurals.fmt_dog_age, dog.getAge(),
-                    dog.getAge()));
+
+
+            int year, month, day;
+            year = dog.getYearOfBirth();
+            month = dog.getMonthOfBirth();
+            day = dog.getDayOfBirth();
+
+            Log.d("DOGDATE", dog.getDogName() + ":" + day +"/"+month+"/"+year);
+
+
+            int months = dog.getAgeInMonths();
+            String ageOfDog;
+            if (months < 12) {
+                ageOfDog = months + " months old";
+            } else {
+                ageOfDog = months/12 + " years old";
+            }
+            ageView.setText(ageOfDog);
+
+
             distanceView.setText(resources.getString(R.string.fmt_distance,
                     new Object[]{dog.getDistance()}));
             breedView.setText(dog.getBreed());

@@ -8,14 +8,20 @@ import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.CheckBox;
+import android.widget.Filter;
 import android.widget.Spinner;
 
 import com.example.android.doggie.models.Dog;
+import com.example.android.doggie.models.User;
 import com.google.firebase.firestore.Query;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+
+import static com.facebook.FacebookSdk.getApplicationContext;
 
 /**
  * Dialog Fragment containing filter form.
@@ -41,6 +47,9 @@ public class FilterDialogFragment extends DialogFragment {
     @BindView(R.id.spinner_sort)
     Spinner mSortSpinner;
 
+    @BindView(R.id.checkBox)
+    CheckBox mCheckBox;
+
 
     private FilterListener mFilterListener;
 
@@ -49,6 +58,7 @@ public class FilterDialogFragment extends DialogFragment {
     public View onCreateView(LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+
         mRootView = inflater.inflate(R.layout.dialog_filters, container, false);
         ButterKnife.bind(this, mRootView);
 
@@ -67,8 +77,10 @@ public class FilterDialogFragment extends DialogFragment {
     @Override
     public void onResume() {
         super.onResume();
-        getDialog().getWindow().setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT,
+        Window window = getDialog().getWindow();
+        if (window == null)
+            return;
+        window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
@@ -84,6 +96,20 @@ public class FilterDialogFragment extends DialogFragment {
     @OnClick(R.id.button_cancel)
     public void onCancelClicked() {
         dismiss();
+    }
+
+
+    /*
+     * If 'my dogs only' is checked returns the userId of current user,
+     * otherwise returns null.
+     */
+
+    @Nullable
+    private String getUsersId() {
+        if (mCheckBox.isChecked()) {
+            return ((UserClient)(getApplicationContext())).getUser().getUserId();
+        }
+        return null;
     }
 
     @Nullable
@@ -120,6 +146,7 @@ public class FilterDialogFragment extends DialogFragment {
         return null;
     }
 
+
     @Nullable
     private Query.Direction getSortDirection() {
         return Query.Direction.ASCENDING;
@@ -138,6 +165,7 @@ public class FilterDialogFragment extends DialogFragment {
 
         if (mRootView != null) {
 
+            filters.setUserId(getUsersId());
             filters.setBreed(getSelectedBreed());
             filters.setGender(getSelectedGender());
             filters.setSortBy(getSelectedSortBy());

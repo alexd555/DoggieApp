@@ -41,6 +41,13 @@
         tools:text="Female" />
 
     <TextView
+        android:id="@+id/dog_item_divider"
+        style="@style/AppTheme.TextDivider"
+        android:layout_alignTop="@+id/dog_item_gender"
+        android:layout_toRightOf="@+id/dog_item_gender"
+        android:text="@string/divider_bullet" />
+
+    <TextView
         android:id="@+id/dog_item_age"
         style="@style/AppTheme.Caption"
         android:layout_width="wrap_content"
@@ -48,7 +55,7 @@
         android:layout_alignBottom="@+id/dog_item_gender"
         android:layout_alignTop="@+id/dog_item_gender"
         android:layout_marginLeft="4dp"
-        android:layout_toRightOf="@+id/dog_item_gender"
+        android:layout_toRightOf="@+id/dog_item_divider"
         android:gravity="center_vertical"
         android:textColor="@color/greyDisabled"
         tools:text="(2 years old)" />

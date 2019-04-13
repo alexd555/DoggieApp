@@ -16,6 +16,8 @@ public class Filters {
     private String sortBy = null;
     private Query.Direction sortDirection = null;
 
+    private String userId = null;
+
     public Filters() {}
 
     public static Filters getDefault() {
@@ -37,6 +39,8 @@ public class Filters {
     public boolean hasSortBy() {
         return !(TextUtils.isEmpty(sortBy));
     }
+
+    public boolean hasUserId() { return !(TextUtils.isEmpty(userId)); }
 
     public String getBreed() {
         return breed;
@@ -68,6 +72,14 @@ public class Filters {
 
     public void setSortDirection(Query.Direction sortDirection) {
         this.sortDirection = sortDirection;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getSearchDescription(Context context) {

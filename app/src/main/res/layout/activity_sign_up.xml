@@ -43,7 +43,7 @@
                 android:hint="Dog's Name" />
         </android.support.design.widget.TextInputLayout>
 
-        <!-- Dog's Age Label -->
+        <!-- Dog's Weight Label -->
         <android.support.design.widget.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -51,26 +51,26 @@
             <EditText android:id="@+id/input_dog_weight"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textCapWords"
+                android:inputType="numberDecimal"
                 android:hint="Dog's Weight (kg)" />
         </android.support.design.widget.TextInputLayout>
 
-        <!-- Dog's Age Label -->
-        <android.support.design.widget.TextInputLayout
-            android:layout_width="match_parent"
+
+        <!-- Dog's Date of Birth Label -->
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp">
-            <EditText android:id="@+id/input_dog_age"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapWords"
-                android:hint="Dog's Age (Years)" />
-        </android.support.design.widget.TextInputLayout>
+            android:hint="Select Date"
+            android:id="@+id/dog_birth_date"
+            android:layout_marginTop="8dp"
+            android:layout_centerHorizontal="true"
+            android:textSize="18sp"/>
+
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal">
             <TextView
                 android:layout_width="wrap_content"

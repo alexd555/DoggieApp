@@ -1,36 +1,27 @@
 {
   "project_info": {
-    "project_number": "744172754011",
-    "firebase_url": "https://doggie-a1cee.firebaseio.com",
-    "project_id": "doggie-a1cee",
-    "storage_bucket": "doggie-a1cee.appspot.com"
+    "project_number": "251123440394",
+    "firebase_url": "https://mynewproject-cff19.firebaseio.com",
+    "project_id": "mynewproject-cff19",
+    "storage_bucket": "mynewproject-cff19.appspot.com"
   },
-
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:744172754011:android:bc1a43c44f192f66",
+        "mobilesdk_app_id": "1:251123440394:android:bc1a43c44f192f66",
         "android_client_info": {
           "package_name": "com.example.android.doggie"
         }
       },
       "oauth_client": [
         {
-          "client_id": "744172754011-fp2icp6vvmhm9slbda9sk8pt5j9pv1ko.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.android.doggie",
-            "certificate_hash": "c4f4dbaad6f5b8f3c39e0bc2e64088f4c259e57e"
-          }
-        },
-        {
-          "client_id": "744172754011-670k0o6f21si8c6b1m2b5rdhlqnsgl60.apps.googleusercontent.com",
+          "client_id": "251123440394-a89o0mqhpptppecdp1gmbofi3ehp0cnm.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAiEGPesWfVH6GYGYXq5uLvsxFFmSMiTLw"
+          "current_key": "AIzaSyAumrt0338Qpm8Id60gcCzt30m0rFY6af4"
         }
       ],
       "services": {
@@ -38,13 +29,8 @@
           "status": 1
         },
         "appinvite_service": {
-          "status": 2,
-          "other_platform_oauth_client": [
-            {
-              "client_id": "744172754011-670k0o6f21si8c6b1m2b5rdhlqnsgl60.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "status": 1,
+          "other_platform_oauth_client": []
         },
         "ads_service": {
           "status": 2

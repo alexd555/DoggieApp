@@ -1,60 +1,66 @@
 package com.example.android.doggie;
 
+import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
-
 import com.example.android.doggie.models.Dog;
 import com.example.android.doggie.models.User;
+import com.example.android.doggie.models.UserLocation;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
-import java.util.Locale;
-import java.util.Random;
+import org.joda.time.LocalDate;
+import java.util.Calendar;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-public class SignUpActivity extends AppCompatActivity {
+public class SignUpActivity extends AppCompatActivity{
 
     private static final String TAG = "SignUpActivity";
 
     private static final int GALLARY_INTENT = 2;
 
-    private static final String RESTAURANT_URL_FMT = "https://storage.googleapis.com/firestorequickstarts.appspot.com/food_%d.png";
-    private static final int MAX_IMAGE_NUM = 22;
-
     @BindView(R.id.input_dog_name)
     EditText mDogNameView;
 
-    @BindView(R.id.input_dog_age)
-    EditText mDogAgeView;
-
     @BindView(R.id.input_dog_weight)
     EditText mDogWeightView;
+
+    @BindView(R.id.dog_birth_date)
+    TextView mDisplayDate;
+
+
+
+
 
     @BindView(R.id.gender_button)
     RadioGroup mGenderRadioGroup;
 
     @BindView(R.id.input_dog_breed)
     Spinner mBreedSpinner;
-
-//    @BindView(R.id.upload_image_button)
-//    ImageButton mImageButton;
-
 
     private FirebaseFirestore mFirestore;
 
@@ -64,6 +70,13 @@ public class SignUpActivity extends AppCompatActivity {
     private StorageReference imageRef;
 
     private String imageUrl;
+
+    private UserLocation mUserLocation;
+    private LocalDate dateOfBirth;
+
+    private DatePickerDialog.OnDateSetListener mDateSetListener;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,7 +88,21 @@ public class SignUpActivity extends AppCompatActivity {
         mFirestore = FirebaseFirestore.getInstance();
 
         storage = FirebaseStorage.getInstance();
+
+        // Present the selected dog's birth date on the screen
+        mDateSetListener = new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker datePicker, int year, int month, int day) {
+                month = month + 1;
+                Log.d(TAG, "onDateSet: mm/dd/yyy: " + month + "/" + day + "/" + year);
+
+                dateOfBirth = new LocalDate(year, month, day);
+                String date = "Dog's Birth Date: " + day + "/" + month + "/" + year;
+                mDisplayDate.setText(date);
+            }
+        };
     }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -85,9 +112,6 @@ public class SignUpActivity extends AppCompatActivity {
         if (requestCode == GALLARY_INTENT && resultCode == RESULT_OK) {
 
             Uri file = data.getData();
-
-            // Make the chosen image from gallery be seen to the user in the sign up form
-//            mImageButton.setImageURI(file);
 
             // Create a storage reference to the dog's image
             storageRef = storage.getReference();
@@ -101,34 +125,19 @@ public class SignUpActivity extends AppCompatActivity {
                     imageRef.getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
                         @Override
                         public void onSuccess(Uri uri) {
-                            Log.d(TAG, "onSuccess: uri= "+ uri.toString());
+                            Log.d(TAG, "successfully uploaded dog's image from gallery to Firebase Storage. uri= "+ uri.toString());
                             imageUrl = uri.toString();
                         }
                     });
                 }
             });
-//            UploadTask uploadTask = imageRef.putFile(file);
-//
-//            // Register observers to listen for when the download is done or if it fails
-//            uploadTask.addOnFailureListener(new OnFailureListener() {
-//                @Override
-//                public void onFailure(@NonNull Exception exception) {
-//                    // TODO : Handle unsuccessful uploads
-//                }
-//            }).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-//                @Override
-//                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-//                    // taskSnapshot.getMetadata() contains file metadata such as size, content-type, etc.
-//                    // ...
-//                    // TODO : Handle successful uploads
-//                }
-//            });
         }
     }
 
+
     @OnClick(R.id.upload_image_button)
     public void onButtonImageClicked() {
-        Log.d(TAG, "launchCamera");
+        Log.d(TAG, "launching gallery");
 
         // Pick an image from storage
         Intent intent = new Intent(Intent.ACTION_PICK);
@@ -136,24 +145,55 @@ public class SignUpActivity extends AppCompatActivity {
         startActivityForResult(intent, GALLARY_INTENT);
     }
 
+
+    @OnClick(R.id.dog_birth_date)
+    public void onSelectDateClicked() {
+        Log.d(TAG, "Date Selection has been clicked");
+
+        Calendar calendar = Calendar.getInstance();
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH);
+        int day = calendar.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog dialog = new DatePickerDialog(
+                this,
+                android.R.style.Theme_Holo_Light_Dialog_MinWidth,
+                mDateSetListener,
+                year, month, day);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.show();
+    }
+
+
     @OnClick(R.id.button_cancel)
-    public void onCancelClicked() { onBackPressed(); }
+    public void onCancelClicked() {
+        Log.d(TAG, "canceling dog's registration");
+        onBackPressed();
+    }
+
 
     @OnClick(R.id.button_apply)
     public void onApplyClicked() {
 
-        // TODO : check the user's input
         String name, gender, breed;
-        int age, weight;
+        double weight;
 
         // Get the dog's name
         name = mDogNameView.getText().toString();
-
-        // Get the dog's age
-        age = Integer.parseInt(mDogAgeView.getText().toString());
+        if (name.isEmpty()) {
+            // No name is given. Notify the user he MUST specify name
+            Toast.makeText(this, "You must specify your dog's name", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         // Get the dog's weight
-        weight = Integer.parseInt(mDogWeightView.getText().toString());
+        weight = Double.parseDouble(mDogWeightView.getText().toString());
+
+        // can't set a future date of birth
+        if (dateOfBirth.isAfter(LocalDate.now())) {
+            Toast.makeText(this, "You can't select a future date", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
         // Get the dog's breed from the selected list
         breed = (String) mBreedSpinner.getSelectedItem();
@@ -174,59 +214,34 @@ public class SignUpActivity extends AppCompatActivity {
             return;
         }
 
+        // TODO: fix distance value
+
 
         final Dog dog = new Dog(FirebaseAuth.getInstance().getCurrentUser(),
-                name, weight, breed, 0, age, gender);
+                name, weight, breed, 0, gender, dateOfBirth);
 
         // Handle dog's image
-
-//        dog.setImage(getRandomImageUrl(new Random()));
         dog.setImage(imageUrl);
 
+//        DocumentReference dogRef = mFirestore
+//                .collection(getString(R.string.collection_dogs))
+//                .document();
+//        dog.setDogId(dogRef.getId());
+//        User user = ((UserClient)(getApplicationContext())).getUser();
+//        DocumentReference newDogRef = mFirestore
+//                .collection(getString(R.string.collection_user_locations))
+//                .document(user.getUserId())
+//                .collection(getString(R.string.collection_user_dogs))
+//                .document(dogRef.getId());
+//        newDogRef.set(dog);
         // Create reference for new dog, for use inside the transaction
         DocumentReference dogRef = mFirestore
                 .collection(getString(R.string.collection_dogs))
                 .document();
+        dog.setDogId(dogRef.getId());
         dogRef.set(dog);
-        User user = ((UserClient)(getApplicationContext())).getUser();
-        DocumentReference newDogRef = mFirestore
-                .collection(getString(R.string.collection_users))
-                .document(user.getUser_id())
-                .collection(getString(R.string.collection_user_dogs))
-                .document(dogRef.getId());
 
-        newDogRef.set(dog);
-//        // TODO : change from batch to single write
-//        WriteBatch batch = mFirestore.batch();
-//        batch.set(dogRef, dog);
-//
-//        batch.commit().addOnCompleteListener(new OnCompleteListener<Void>() {
-//            @Override
-//            public void onComplete(@NonNull Task<Void> task) {
-//                if (task.isSuccessful()) {
-//                    Log.d(TAG, "Write batch succeeded.");
-//                } else {
-//                    Log.w(TAG, "write batch failed.", task.getException());
-//                }
-//            }
-//        });
-        // Return to previous activity
         onBackPressed();
-    }
-
-//    private static String getImageUrl() {
-
-//    }
-
-
-    /**
-     * Get a random image.
-     */
-    private static String getRandomImageUrl(Random random) {
-        // Integer between 1 and MAX_IMAGE_NUM (inclusive)
-        int id = random.nextInt(MAX_IMAGE_NUM) + 1;
-
-        return String.format(Locale.getDefault(), RESTAURANT_URL_FMT, id);
     }
 
 }

@@ -8,8 +8,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.StrictMode;
 import android.support.annotation.NonNull;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
@@ -56,8 +58,11 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.android.gms.location.LocationListener;
+import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -108,22 +113,26 @@ public class MainActivity extends AppCompatActivity implements
     private ArrayList<UserLocation> mUserLocations = new ArrayList<>();
     private ListenerRegistration mUserListEventListener;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-
         ButterKnife.bind(this);
         setSupportActionBar(mToolbar);
+//        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+//        StrictMode.setThreadPolicy(policy);
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
         // View model
         mViewModel = ViewModelProviders.of(this).get(MainActivityViewModel.class);
 
 
         // Access a Cloud Firestore instance from MainActivity
         mFirestore = FirebaseFirestore.getInstance();
+
         firebaseAuth = FirebaseAuth.getInstance();
+
 //        // Get ${LIMIT} dogs
         mQuery = mFirestore.collection(getString(R.string.collection_dogs))
                 .orderBy("distance", Query.Direction.ASCENDING)
@@ -178,7 +187,7 @@ public class MainActivity extends AppCompatActivity implements
             mAdapter.startListening();
         }
     }
-//
+    //
     @Override
     public void onStop() {
         super.onStop();
@@ -192,24 +201,30 @@ public class MainActivity extends AppCompatActivity implements
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return super.onCreateOptionsMenu(menu);
     }
-//
+    //
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_map:
                 show_on_map();
                 break;
+            case R.id.menu_profile:
+                myProfile();
+                break;
             case R.id.menu_add_dog:
                 onAddDogClicked();
-                break;
-            case R.id.menu_my_dogs:
-                onMyDogsClicked();
                 break;
             case R.id.menu_sign_out:
                 signOut();
                 break;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void myProfile()
+    {
+        Intent intent = new Intent(this, UserProfileActivity.class);
+        startActivity(intent);
     }
     private void show_on_map()
     {
@@ -242,7 +257,9 @@ public class MainActivity extends AppCompatActivity implements
 
                             // Clear the list and add all the users again
                             mUserList.clear();
+                            mUserLocations.clear();
                             mUserList = new ArrayList<>();
+                            mUserLocations = new ArrayList<>();
 
                             for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                                 User user = doc.toObject(User.class);
@@ -255,17 +272,18 @@ public class MainActivity extends AppCompatActivity implements
                     }
                 });
     }
+
     private void getUserLocation(User user){
         DocumentReference locationsRef = mFirestore
                 .collection(getString(R.string.collection_user_locations))
-                .document(user.getUser_id());
+                .document(user.getUserId());
 
         locationsRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
             @Override
             public void onComplete(@NonNull Task<DocumentSnapshot> task) {
 
                 if(task.isSuccessful()){
-                    if(task.getResult().toObject(UserLocation.class) != null){
+                    if(task.getResult()!=null && task.getResult().toObject(UserLocation.class) != null){
 
                         mUserLocations.add(task.getResult().toObject(UserLocation.class));
                     }
@@ -274,29 +292,10 @@ public class MainActivity extends AppCompatActivity implements
         });
 
     }
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//        if (requestCode == RC_SIGN_IN) {
-////            IdpResponse response = IdpResponse.fromResultIntent(data);
-//            mViewModel.setIsSigningIn(false);
-//
-//            if (resultCode != RESULT_OK) {
-//                if (response == null) {
-//                    // User pressed the back button.
-//                    finish();
-//                } else if (response.getError() != null
-//                        && response.getError().getErrorCode() == ErrorCodes.NO_NETWORK) {
-//                    showSignInErrorDialog(R.string.message_no_network);
-//                } else {
-//                    showSignInErrorDialog(R.string.message_unknown);
-//                }
-//            }
-//        }
-//    }
 
     @OnClick(R.id.filter_bar)
     public void onFilterClicked() {
+        Log.d(TAG, "filter button has been clicked");
         // Show the dialog containing filter options
         mFilterDialog.show(getSupportFragmentManager(), FilterDialogFragment.TAG);
     }
@@ -308,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements
         onFilter(Filters.getDefault());
     }
 
+    //TODO: complete this
     @Override
     public void onDogSelected(DocumentSnapshot dog) {
 
@@ -326,6 +326,11 @@ public class MainActivity extends AppCompatActivity implements
         // Gender (equality filter)
         if (filters.hasGender()) {
             query = query.whereEqualTo(Dog.FIELD_GENDER, filters.getGender());
+        }
+
+        // Current user's dogs only
+        if (filters.hasUserId()) {
+            query = query.whereEqualTo("userId", filters.getUserId());
         }
 
         // Sort by (orderBy with direction)
@@ -350,7 +355,7 @@ public class MainActivity extends AppCompatActivity implements
     private boolean shouldStartSignIn() {
         return (!mViewModel.getIsSigningIn() && FirebaseAuth.getInstance().getCurrentUser() == null);
     }
-//
+    //
     private void startSignIn() {
 //        // Sign in with FirebaseUI
 //        Intent intent = AuthUI.getInstance().createSignInIntentBuilder()
@@ -371,8 +376,30 @@ public class MainActivity extends AppCompatActivity implements
         String provider = user.getProviders().get(0);
         return provider.equals("facebook.com");
     }
+    private void updateSignStatus(User user) {
+        try {
+            DocumentReference userRef = mFirestore
+                    .collection(getString(R.string.collection_users))
+                    .document(user.getUserId());
+            userRef.set(user).addOnCompleteListener(new OnCompleteListener<Void>() {
+                @Override
+                public void onComplete(@NonNull Task<Void> task) {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "onComplete: \nlogin status is updated into database.");
+                    }
+                }
+            });
+        } catch (NullPointerException e) {
+            Log.e(TAG, "update status error" + e.getMessage());
+        }
+    }
     private void signOut(){
         FirebaseAuth.getInstance().signOut();
+        User user = ((UserClient)(getApplicationContext())).getUser();
+        user.setLogOut("Yes");
+        user.updateOnlineStatus();
+        ((UserClient)(getApplicationContext())).setUser(user);
+//        updateSignStatus(user);
         if (isFacebookSigned()) {
             LoginManager.getInstance().logOut();
         }
@@ -386,36 +413,12 @@ public class MainActivity extends AppCompatActivity implements
         Intent intent = new Intent(this, SignUpActivity.class);
 
         startActivity(intent);
-//        overridePendingTransition(R.anim.slide_in_from_right, R.anim.slide_out_to_left);
-
-    }
-
-    private void onMyDogsClicked() {
 
     }
 
 
 
-//    private void showSignInErrorDialog(@StringRes int message) {
-//        AlertDialog dialog = new AlertDialog.Builder(this)
-//                .setTitle(R.string.title_sign_in_error)
-//                .setMessage(message)
-//                .setCancelable(false)
-//                .setPositiveButton(R.string.option_retry, new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialogInterface, int i) {
-//                        startSignIn();
-//                    }
-//                })
-//                .setNegativeButton(R.string.option_exit, new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialogInterface, int i) {
-//                        finish();
-//                    }
-//                }).create();
-//
-//        dialog.show();
-//    }
+
 
     private void getLocationPermission() {
         /*
@@ -478,6 +481,7 @@ public class MainActivity extends AppCompatActivity implements
             });
         }
         else{
+            Log.d(TAG, "user location is NOT null");
             getLastKnownLocation();
         }
     }
@@ -493,7 +497,7 @@ public class MainActivity extends AppCompatActivity implements
         mFusedLocationClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<android.location.Location>() {
             @Override
             public void onComplete(@NonNull Task<android.location.Location> task) {
-                if (task.isSuccessful()) {
+                if (task.isSuccessful() && task.getResult() != null) {
                     Location location = task.getResult();
                     GeoPoint geoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
                     mUserLocation.setGeo_point(geoPoint);
@@ -600,6 +604,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onResume() {
         super.onResume();
+//        getUsers();
         if(checkMapServices()){
             if(mLocationPermissionGranted){
                 getUserDetails();

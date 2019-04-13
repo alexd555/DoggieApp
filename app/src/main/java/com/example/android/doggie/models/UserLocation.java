@@ -1,6 +1,5 @@
 package com.example.android.doggie.models;
 
-import android.location.Location;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -14,6 +13,7 @@ public class UserLocation implements Parcelable{
     private User user;
     private GeoPoint geo_point;
     private @ServerTimestamp Date timestamp;
+
 
     public UserLocation(User user, GeoPoint geo_point, Date timestamp) {
         this.user = user;
@@ -52,12 +52,12 @@ public class UserLocation implements Parcelable{
     public GeoPoint getGeo_point() {
         return geo_point;
     }
-    public Location get_location() {
-        Location loc = new Location("my location");
-        loc.setLatitude(geo_point.getLatitude());
-        loc.setLongitude(geo_point.getLongitude());
-        return loc;
-    }
+//    public Location get_location() {
+//        Location loc = new Location("my location");
+//        loc.setLatitude(geo_point.getLatitude());
+//        loc.setLongitude(geo_point.getLongitude());
+//        return loc;
+//    }
     public void setGeo_point(GeoPoint geo_point) {
         this.geo_point = geo_point;
     }

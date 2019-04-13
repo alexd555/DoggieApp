@@ -112,6 +112,9 @@ public class LoginActivity extends AppCompatActivity implements
                     Log.d(TAG, "onAuthStateChanged:signed_in:" + user.getUid());
                     Toast.makeText(LoginActivity.this, "Authenticated with: " +
                             user.getEmail(), Toast.LENGTH_SHORT).show();
+                    Log.d(TAG,"My profile "+user.getPhotoUrl().toString());
+                    final String url = user.getPhotoUrl().toString();
+
 
                     FirebaseFirestore db = FirebaseFirestore.getInstance();
                     FirebaseFirestoreSettings settings = new FirebaseFirestoreSettings.Builder()
@@ -125,9 +128,19 @@ public class LoginActivity extends AppCompatActivity implements
                     userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                         @Override
                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                            if(task.isSuccessful()){
+                            if(task.isSuccessful() && task.getResult()!=null){
                                 Log.d(TAG, "onComplete: successfully set the user client.");
                                 User user = task.getResult().toObject(User.class);
+                                if (user!=null) {
+//                                    FirebaseUser curFirebaseUser = FirebaseAuth.getInstance().getCurrentUser();
+//                                    if (curFirebaseUser!=null && curFirebaseUser.getPhotoUrl()!=null) {
+//                                        user.setAvatar(curFirebaseUser.getPhotoUrl().toString());
+//                                    }
+                                    user.setLogOut("No");
+                                    user.setRunning("Yes");
+                                    user.updateOnlineStatus();
+//                                    user.setImagePath(url);
+                                }
                                 ((UserClient)(getApplicationContext())).setUser(user);
                             }
                         }
@@ -170,7 +183,6 @@ public class LoginActivity extends AppCompatActivity implements
 
     private void signIn(){
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         //check if the fields are filled out
         if(!isEmpty(mEmail.getText().toString())
                 && !isEmpty(mPassword.getText().toString())){
@@ -251,6 +263,9 @@ public class LoginActivity extends AppCompatActivity implements
                         if (task.isSuccessful()) {
                             // Sign in success, update UI with the signed-in user's information
                             Log.d(TAG, "signInWithCredential:success");
+                            FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                            if (user !=null)
+                                FirebaseCommon.createNewUser(user);
                         } else {
                             // If sign in fails, display a message to the user.
                             Log.w(TAG, "signInWithCredential:failure", task.getException());

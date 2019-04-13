@@ -50,7 +50,7 @@ public class DogUtil {
 //        dog.setPhoto(R.drawable.miley);
 //        dog.setName(getRandomName(random));
         dog.setGender(getRandomString(genders, random));
-        dog.setAge(getRandomInt(ages, random));
+//        dog.setAge(getRandomInt(ages, random));
         dog.setBreed(getRandomString(breeds, random));
         dog.setWeight(getRandomInt(weights, random));
         dog.setDistance(getRandomDouble(distances, random));
