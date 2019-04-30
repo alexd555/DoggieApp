@@ -462,8 +462,10 @@ public class MainActivity extends AppCompatActivity implements
         return false;
     }
     private void getUserDetails(){
-        if(mUserLocation == null){
+        if(mUserLocation == null ){
             mUserLocation = new UserLocation();
+            if (FirebaseAuth.getInstance() == null)
+                return;
             DocumentReference userRef = mFirestore.collection(getString(R.string.collection_users))
                     .document(FirebaseAuth.getInstance().getUid());
 

@@ -163,7 +163,7 @@ public class LocationService extends Service {
 //                            FireBaseCommon.updateSignStatus(user);
                             saveUserLocation(userLocation);
                             saveUser(user);
-//                            calculateDogDistrance(userLocation);
+                            calculateDogDistrance(userLocation);
 //                            UpdateUsersStatus();
 
                         }
@@ -292,9 +292,8 @@ public class LocationService extends Service {
         });
 
     }
-    private void updateDogLocation(Dog dog) {
-        if (dog == null)
-            return;
+    private void saveDog(final Dog dog)
+    {
         try{
             DocumentReference locationDogRef = FirebaseFirestore.getInstance()
                     .collection(getString(R.string.collection_dogs))
@@ -305,6 +304,7 @@ public class LocationService extends Service {
                 public void onComplete(@NonNull Task<Void> task) {
                     if(task.isSuccessful())
                     {
+                        Log.d(TAG, "position dog is updated");
 //                        Log.d(TAG, "onComplete: \ninserted user location into database." +
 //                                "\n latitude: " + userLocation.getGeo_point().getLatitude() +
 //                                "\n longitude: " + userLocation.getGeo_point().getLongitude());
@@ -314,7 +314,13 @@ public class LocationService extends Service {
         }catch (NullPointerException e){
             Log.e(TAG, "saveUserLocation: User instance is null, stopping location service.");
             Log.e(TAG, "saveUserLocation: NullPointerException: "  + e.getMessage() );
-//            stopSelf();
+            stopSelf();
+        }
+    }
+    private void updateDogLocation() {
+        for (Dog dog :mDogList)
+        {
+            saveDog(dog);
         }
     }
 
@@ -340,18 +346,30 @@ public class LocationService extends Service {
 
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         Dog dog = doc.toObject(Dog.class);
-                        double dist = dog.calculateDistance(userLocation.getGeo_point());
-                        dog.setDistance(dist);
-                        if (dog.getUserId().equals(userLocation.getUser().getUserId()))
+                        if (dog == null)
+                            continue;
+                        if (userLocation.getUser() == null)
+                            continue;
+                        if (dog.getUserId().equals(userLocation.getUser().getUserId())) {
                             dog.setLocation(userLocation.getGeo_point());
-                        updateDogLocation(dog);
-//                        mDogList.add(dog);
+                            dog.setDistance(0);
+                        }
+                        else {
+//                            dog.setLocation(new GeoPoint(32.8117099,0));
+                            double dist = dog.calculateDistance(userLocation.getGeo_point());
+                            dog.setDistance(dist);
+                        }
+
+//                        updateDogLocation(dog);
+                        mDogList.add(dog);
                     }
 
                     Log.d(TAG, "onEvent: user list size: " + mDogList.size());
                 }
+                updateDogLocation();
             }
         });
+
     }
 
 }
